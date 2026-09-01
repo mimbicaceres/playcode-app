@@ -26,7 +26,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onNavigate }) => {
 
         {/* Branding & Headline */}
         <h1 className="font-heading font-extrabold text-5xl md:text-6xl text-[#004ac6] tracking-tight mb-2">
-          CODIX
+          PlayCode
         </h1>
         <p className="text-lg md:text-xl text-[#434655] font-medium mb-10 max-w-[280px]">
           Aprendé a programar, paso a paso.

@@ -19,7 +19,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
     { id: 'u3', name: 'Ana Belén Martínez', email: 'ana.martinez@tecnica1.edu.ar', role: 'student' as UserRole, school: 'Escuela Técnica N°1', status: 'Activo', xp: 2180 },
     { id: 'u4', name: 'Prof. Carla Véliz', email: 'carla.veliz@itba.edu.ar', role: 'teacher' as UserRole, school: 'Instituto Tecnológico', status: 'Activo', xp: 14200 },
     { id: 'u5', name: 'Martín Bossi', email: 'm.bossi@sanmartin.edu.ar', role: 'student' as UserRole, school: 'Colegio San Martín', status: 'Pendiente', xp: 450 },
-    { id: 'u6', name: 'Admin Root CODIX', email: 'admin@codix.edu', role: 'admin' as UserRole, school: 'Ministerio de Educación', status: 'Activo', xp: 25000 },
+    { id: 'u6', name: 'Admin Root PlayCode', email: 'admin@PlayCode.edu', role: 'admin' as UserRole, school: 'Ministerio de Educación', status: 'Activo', xp: 25000 },
   ]);
 
   const [schoolsList] = useState([
@@ -60,7 +60,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
               <span className="text-xs font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">
                 Super Admin
               </span>
-              <span className="text-xs font-semibold text-slate-500">CODIX Core v2.4</span>
+              <span className="text-xs font-semibold text-slate-500">PlayCode Core v2.4</span>
             </div>
             <h1 className="font-heading font-extrabold text-2xl md:text-3xl text-[#0b1c30] mt-1">
               Panel de Administración General

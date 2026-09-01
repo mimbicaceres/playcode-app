@@ -41,7 +41,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
             />
           </div>
           <h1 className="font-heading font-extrabold text-4xl text-[#004ac6] tracking-tight">
-            CODIX
+            PlayCode
           </h1>
         </div>
       </header>

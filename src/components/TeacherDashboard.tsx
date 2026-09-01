@@ -48,7 +48,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           </div>
           <div>
             <span className="font-heading font-extrabold text-xl text-[#004ac6] tracking-tight">
-              CODIX
+              PlayCode
             </span>
             <span className="block text-[10px] font-bold text-[#737686] uppercase tracking-wider">
               Portal Docente

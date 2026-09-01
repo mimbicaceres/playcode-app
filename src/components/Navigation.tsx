@@ -28,7 +28,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-blue-400 flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">visibility</span>
-            Vistas de CODIX:
+            Vistas de PlayCode:
           </span>
           
           {/* Student Flow */}
@@ -160,7 +160,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 />
               </div>
               <span className="text-2xl font-bold font-heading text-[#004ac6] tracking-tight">
-                CODIX
+                PlayCode
               </span>
             </div>
 

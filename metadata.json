@@ -1,5 +1,5 @@
 {
-  "name": "CODIX - Plataforma de Aprendizaje de Programación",
+  "name": "PlayCode - Plataforma de Aprendizaje de Programación",
   "description": "Plataforma educativa y gamificada para aprender programación paso a paso con el Carpincho Programador.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
