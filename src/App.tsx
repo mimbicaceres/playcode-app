@@ -35,20 +35,21 @@ export default function App() {
     }));
   };
 
-  const handleRoleChange = (newRole: UserRole) => {
-    setUser((prev: UserProfile) => ({
-      ...prev,
-      role: newRole
-    }));
+// En src/App.tsx
+const handleRoleChange = (newRole: UserRole) => {
+  setUser((prev: UserProfile) => ({
+    ...prev,
+    role: newRole
+  }));
 
-    if (newRole === 'student') {
-      setCurrentView('dashboard');
-    } else if (newRole === 'teacher') {
-      setCurrentView('teacher_dashboard');
-    } else if (newRole === 'admin') {
-      setCurrentView('admin_dashboard');
-    }
-  };
+  if (newRole === 'student') {
+    setCurrentView('dashboard');
+  } else if (newRole === 'teacher') {
+    setCurrentView('teacher_dashboard');
+  } else if (newRole === 'admin') {
+    setCurrentView('admin_dashboard');
+  }
+};
 
   const handleLogin = (email: string, role: UserRole) => {
     setUser((prev: UserProfile) => ({

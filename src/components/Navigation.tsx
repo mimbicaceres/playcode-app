@@ -8,7 +8,12 @@ interface NavigationProps {
   onRoleChange: (role: UserRole) => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate }) => {
+export const Navigation: React.FC<NavigationProps> = ({ 
+  currentView, 
+  onNavigate, 
+  user, 
+  onRoleChange 
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -30,9 +35,9 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
   ];
 
   const panelItems = [
-    { id: 'dashboard' as ScreenView, label: 'Panel Alumno', icon: '🎓' },
-    { id: 'teacher_dashboard' as ScreenView, label: 'Panel Docente', icon: '👨‍🏫' },
-    { id: 'admin_dashboard' as ScreenView, label: 'Admin Institucional', icon: '⚙️' },
+    { id: 'dashboard' as ScreenView, role: 'student' as UserRole, label: 'Panel Alumno', icon: '🎓' },
+    { id: 'teacher_dashboard' as ScreenView, role: 'teacher' as UserRole, label: 'Panel Docente', icon: '👨‍🏫' },
+    { id: 'admin_dashboard' as ScreenView, role: 'admin' as UserRole, label: 'Admin Institucional', icon: '⚙️' },
   ];
 
   return (
@@ -44,7 +49,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/55 transition-colors focus:outline-none"
+              className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/55 transition-colors focus:outline-none cursor-pointer"
               title="Paneles del Sistema"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,10 +68,11 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
                     <button
                       key={panel.id}
                       onClick={() => {
-                        onNavigate(panel.id);
+                        onRoleChange(panel.role); // 👈 CAMBIA EL ROL GLOBAL
+                        onNavigate(panel.id);     // 👈 CAMBIA LA PANTALLA
                         setIsMenuOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-3 transition-colors
+                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-3 transition-colors cursor-pointer
                         ${isActive 
                           ? 'bg-blue-600/20 text-blue-400 font-medium' 
                           : 'text-slate-200 hover:bg-slate-800 hover:text-white'
@@ -81,7 +87,13 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div 
+            onClick={() => {
+              onRoleChange('student');
+              onNavigate('dashboard');
+            }}
+            className="flex items-center gap-2 cursor-pointer"
+          >
             <span className="text-lg font-bold tracking-tight text-blue-400">PlayCode</span>
           </div>
         </div>
@@ -93,8 +105,11 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-150
+                onClick={() => {
+                  if (user.role !== 'student') onRoleChange('student');
+                  onNavigate(item.id);
+                }}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-150 cursor-pointer
                   ${isActive 
                     ? 'bg-blue-600 text-white shadow-sm' 
                     : 'text-blue-100 hover:bg-blue-900/50 hover:text-white'
@@ -106,16 +121,19 @@ export const Navigation: React.FC<NavigationProps> = ({ currentView, onNavigate 
           })}
         </nav>
 
-        {/* Derecha: Perfil de usuario */}
-        <div className="flex items-center gap-3">
+        {/* Derecha: Perfil de usuario dinámico */}
+        <div 
+          onClick={() => onNavigate('profile')}
+          className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+        >
           <img 
-            src="https://api.dicebear.com/8.x/notionists/svg?seed=Facundo" 
+            src={user.avatarUrl || "https://api.dicebear.com/8.x/notionists/svg?seed=Facundo"} 
             alt="Avatar" 
-            className="w-8 h-8 rounded-full border border-white/20 bg-slate-800"
+            className="w-8 h-8 rounded-full border border-white/20 bg-slate-800 object-cover"
           />
           <div className="text-xs">
-            <div className="font-semibold">Facundo</div>
-            <div className="text-blue-300">4to Año</div>
+            <div className="font-semibold">{user.name}</div>
+            <div className="text-blue-300 capitalize">{user.role === 'student' ? (user.grade || '4to Año') : user.role}</div>
           </div>
         </div>
 
