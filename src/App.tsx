@@ -84,13 +84,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* Global Navigation with Screen Quick Switcher */}
-      {React.createElement(Navigation as any, {
-        currentView,
-        onNavigate: setCurrentView,
-        user,
-        onRoleChange: handleRoleChange
-      })}
+      {/* Global Navigation Bar */}
+      <Navigation
+        currentView={currentView}
+        onNavigate={setCurrentView}
+        user={user}
+        onRoleChange={handleRoleChange}
+      />
 
       {/* Screen Router */}
       <main className="flex-1 flex flex-col">

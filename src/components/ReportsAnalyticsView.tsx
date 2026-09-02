@@ -300,7 +300,7 @@ export const ReportsAnalyticsView: React.FC = () => {
         </div>
         <div className="w-14 h-14 rounded-full bg-blue-100 border-2 border-[#2563eb] overflow-hidden shadow-md flex-shrink-0">
           <img 
-            src={MASCOT_IMAGES.closeUp} 
+            src={MASCOT_IMAGES.closeup} 
             alt="Carpincho" 
             className="w-full h-full object-cover"
           />
