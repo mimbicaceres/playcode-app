@@ -1,14 +1,14 @@
 import { Course, UserProfile, AchievementBadge, ActivityItem, ExerciseHistoryItem, InstitutionStats } from '../types';
 
 export const MASCOT_IMAGES = {
-  mainHero:'/logo-playcode.png'
-  roundAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgs0uRB2TG8iP-XXl0jyreBYeW8ioUoV_G7IhbtnbFzi2-aiGSOiOHExhJGQqoMLkUt4E3NAWYo_iSmuzGOWy-SyB2Z4-UVQak2v41iwC8TkLbQx0hYQw2EBsXOEyo3einzW-hpCqBLMhc1HYr86Fv7InLytoOz3mO6UkSTui4mZH6_efeyMWhRYV81E_D0fTo3p56hIGcFKttYvk-UcqIdMPJIlJIWortvg0eMRbJh4MSILFWezw',
-  pointing: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAJkzun3RipIit1egx1cP8tfj0Q4RwFxDS8xrslN89ezQHnIMMyfaLZQIHsGHSGgjUkDz0dTHZYQ5gd52HzUFa2DaO-WaAD9IglGLOPUfLH6m5hhCey8crDh64ENDCZGJGl7gg7t6Ab3FRKBGPb7DpvHABPL7Wj-AYi_GkMa38fxi_TiY3J5JsBE8gpDzfjY_TnzNS3CppWP2fn7g725N9W8mOWuJP-rTfHJEqGBfL6Upi79RLVUTM',
-  thumbsUp: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD5nJJ9JOHuwsBXKNE-EXf_LCXN7W0yCUvJjbQqQkXwFnIIFunv--JGy5NBTigBQYSkZDGruX-Em_2vDKnY4k7Ln52TpCrW3hzpwEzco0XhIr_2PBEHnAFWr1JWCC66j58vMS6XU1FE2ZEd8IwziAeAHuEAwoTuhrk_dsogMZPY1qh1YrwUDdVebvmoPIhR0i6lP3TRKHWzcbH4BPujRsLeuMoIqHS05At4i7GqKqMPpZUg9I4nStY',
-  closeUp: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB_zfR56re9Ygpb19x9edlMBJsu5vWCLEzJFYsBMyYJgqeWWEchf9NOKY1clD4VrPER4eX6Js4_xVVMbu1DoSt17rIo73QknDZqrgbzLm1x8sYyRuD6MaT76OG3j7P79HgVU0xcQXvVnaRn353TZf6tWHNhOkJcPEAt8cVZVPsTTLWw5fTfni447najYFgHZA2ew-xk9pXQkIFwCD0eJ1fzKMRNcv_BxopSfS9PHuNvu_C-C0g1kd8',
-  typingLaptop: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCJXzlko2rPH_VJEa-3lzIofXMyDMJtZCd6lMucLZ9IhT12JTTDbmPWmUiUF6vNmu-8Q9Ct8eBxMDzLhwX0O5KAlBnR0YWhpHB3Q_lcxjZlqRUGoOBrRqjLvYrJuBGAEYkfAsx7nNlQftmRY7JF6QnwU6IpqKcQGqs_wZO-SeY1lbM0QqLw1Fv6U2Th3sGGUtZGDPozLz3LAq4Dt_uDiQhTOnycnNbi70DW4e59zn15L5EsFitVyD0',
-  cornerPeek: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDbUvl6J4jHkYs_TwWwO6iRsMrO1xefkKiYhEXaGwWxGpxEzOP7f3uN5aFU5peVJ1I5uTDM5b5X160UQBdGJ6t5hYApCb4Nf8AFfsp0vRbjwlWETBRexCIzfRNPMsuccx_ovBtn3B7pGuOFpuMwxyOPbHKBjEkP-hF99o-qIueV7lPnQNpVg9U-S-JOMlHb8yEFxlAZu23kNCFG0Rnhh06LESA3uC2uKHDEp-wUzOf_HdwZZb-jS68',
-  faceCorner: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCceaxfhWAN34C9WHFqN9XSquKcOTXAw0BGSp_Y5zY_tXzzWKpVnht0_ZHLdXewoa1XKEk-lpnm91jCesGm08QeYVZ70-FD4AkeNsxLwYg7MBt23suP-vvSu_v06mNCu-D4s0TkTKdMcRqhgbO55QnQ8LjNXMJoVZ-S9Sus2mOGg6nBWdYsTseU4fiPYwZFLw2u2EXfgYT5J1jZKbDsFQT6i6MeB6jtdX4g1QVm91sMBJKaouYZZlA',
+  mainHero: '/carpii.png',
+  roundAvatar: '/carpii.png',
+  pointing: '/carpii.png',
+  thumbsUp: '/carpii.png',
+  closeup: '/carpii.png',
+  typingLaptop: '/carpii.png',
+  cornerPeek: '/carpii.png',
+  faceCorner: '/carpii.png',
 };
 
 export const LOGO_IMAGES = {

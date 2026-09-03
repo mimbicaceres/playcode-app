@@ -42,7 +42,7 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onNavigate, onRegist
             />
           </div>
           <h1 className="text-3xl font-heading font-extrabold text-[#004ac6] tracking-tight">
-            CODIX
+            PlayCode
           </h1>
         </div>
       </header>

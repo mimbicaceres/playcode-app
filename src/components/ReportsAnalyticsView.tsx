@@ -48,7 +48,7 @@ export const ReportsAnalyticsView: React.FC = () => {
       {copiedNotification && (
         <div className="mb-6 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
           <span className="material-symbols-outlined text-base">check_circle</span>
-          Reporte compilado con éxito. Se ha descargado el informe analítico de CODIX.
+          Reporte compilado con éxito. Se ha descargado el informe analítico de PlayCode.
         </div>
       )}
 
@@ -300,7 +300,7 @@ export const ReportsAnalyticsView: React.FC = () => {
         </div>
         <div className="w-14 h-14 rounded-full bg-blue-100 border-2 border-[#2563eb] overflow-hidden shadow-md flex-shrink-0">
           <img 
-            src={MASCOT_IMAGES.closeUp} 
+            src={MASCOT_IMAGES.closeup} 
             alt="Carpincho" 
             className="w-full h-full object-cover"
           />
