@@ -8,7 +8,7 @@
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Fredoka', 'Inter', sans-serif;
   }
 
   code, pre, .font-mono, .code-editor {
@@ -25,24 +25,86 @@
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* Scoped Glassmorphism: only for featured hero card & success modal */
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0px 8px 24px -4px rgba(37, 99, 235, 0.08);
 }
 
+/* Soft Cards: clean solid white with crisp border and subtle elevation */
 .soft-card {
-  border: 1px solid #E2E8F0;
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
   background-color: #ffffff;
-  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  box-shadow: 0px 2px 8px rgba(11, 28, 48, 0.03);
 }
 
-.bg-tech-pattern {
-  background-image: radial-gradient(circle at 2px 2px, rgba(0, 74, 198, 0.06) 1px, transparent 0);
-  background-size: 24px 24px;
+/* Sendero Motif: Organic dotted pathway evoking course roadmap curves */
+.bg-sendero-pattern, .bg-tech-pattern {
+  background-color: #f8f9ff;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40 Q 20 12, 40 40 T 80 40' fill='none' stroke='%232563eb' stroke-opacity='0.08' stroke-width='2' stroke-dasharray='4 4' stroke-linecap='round'/%3E%3Ccircle cx='40' cy='40' r='2' fill='%232563eb' fill-opacity='0.12'/%3E%3C/svg%3E");
+  background-size: 80px 80px;
+}
+
+/* Tactile 3D Game Buttons (Duolingo-style physical depth for primary CTAs) */
+.btn-game-primary {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-bottom: 4px solid #1d4ed8;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.1s ease-out;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+.btn-game-primary:hover {
+  background-color: #1d4ed8;
+}
+.btn-game-primary:active {
+  border-bottom-width: 0px;
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.btn-game-amber {
+  background-color: #ffb95f;
+  color: #0b1c30;
+  border-bottom: 4px solid #d97706;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  transition: all 0.1s ease-out;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 185, 95, 0.35);
+}
+.btn-game-amber:hover {
+  background-color: #ffa83b;
+}
+.btn-game-amber:active {
+  border-bottom-width: 0px;
+  transform: translateY(4px);
+  box-shadow: none;
+}
+
+.btn-game-success {
+  background-color: #10B981;
+  color: #ffffff;
+  border-bottom: 4px solid #00714d;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.1s ease-out;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+.btn-game-success:hover {
+  background-color: #059669;
+}
+.btn-game-success:active {
+  border-bottom-width: 0px;
+  transform: translateY(4px);
+  box-shadow: none;
 }
 
 /* Hide scrollbar for tabs */
@@ -72,4 +134,13 @@
 
 .animate-float {
   animation: float-subtle 4s ease-in-out infinite;
+}
+
+@keyframes peek-tilt {
+  0%, 100% { transform: rotate(4deg) translateY(0px); }
+  50% { transform: rotate(7deg) translateY(-3px); }
+}
+
+.animate-peek {
+  animation: peek-tilt 3.5s ease-in-out infinite;
 }

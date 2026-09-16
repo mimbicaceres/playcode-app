@@ -94,7 +94,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             }}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <span className="text-lg font-bold tracking-tight text-blue-400">PlayCode</span>
+            <span className="font-heading font-bold text-xl tracking-wide text-blue-400">PlayCode</span>
           </div>
         </div>
 

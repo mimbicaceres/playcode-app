@@ -34,44 +34,44 @@ export const SuccessFeedbackModal: React.FC<SuccessFeedbackModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 relative p-6 md:p-8 text-center animate-scale-up">
-        {/* Mascot Image Celebrating */}
-        <div className="w-40 h-40 mx-auto mb-4 relative animate-bounce" style={{ animationDuration: '2s' }}>
+      <div className="glass-card w-full max-w-md rounded-3xl shadow-2xl overflow-visible flex flex-col relative p-6 md:p-8 pt-16 text-center animate-scale-up">
+        {/* Protagonist Mascot Celebrating breaking the top border */}
+        <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-32 h-32 md:w-36 md:h-36 pointer-events-none drop-shadow-xl animate-float">
           <img 
             src={MASCOT_IMAGES.mainHero} 
-            alt="Carpincho Celebrating" 
-            className="w-full h-full object-contain drop-shadow-lg"
+            alt="Carpincho Celebrando" 
+            className="w-full h-full object-contain"
           />
         </div>
 
         {/* Title */}
-        <h1 className="font-heading font-extrabold text-3xl md:text-4xl text-[#004ac6] mb-3">
+        <h2 className="font-heading font-bold text-3xl md:text-4xl text-[#0b1c30] mb-2 mt-2">
           ¡Excelente!
-        </h1>
+        </h2>
 
-        {/* XP Badge */}
-        <div className="inline-flex items-center justify-center bg-amber-100 text-amber-900 px-4 py-1.5 rounded-full mb-6 mx-auto border border-amber-300 shadow-sm">
+        {/* Warm XP Badge */}
+        <div className="inline-flex items-center justify-center bg-[#fff4e5] text-[#92400e] px-4 py-1.5 rounded-full mb-5 mx-auto border border-[#ffb95f] shadow-xs">
           <span className="material-symbols-outlined mr-1.5 text-amber-500 fill text-lg">
-            star
+            stars
           </span>
           <span className="text-sm font-bold">+{rewardXp} XP</span>
         </div>
 
         {/* Motivational Speech Bubble */}
-        <div className="bg-[#f8f9ff] border border-blue-100 rounded-2xl p-5 mb-8 shadow-sm relative">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-[#f8f9ff] border-t border-l border-blue-100 rotate-45" />
-          <p className="text-sm md:text-base text-[#0b1c30] relative z-10 leading-relaxed font-medium">
+        <div className="bg-white/90 border border-slate-200 rounded-2xl p-4 mb-6 shadow-xs relative">
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/90 border-t border-l border-slate-200 rotate-45" />
+          <p className="text-xs md:text-sm text-[#434655] relative z-10 leading-relaxed font-medium">
             ¡Tu lógica es impecable! Estás dominando estas estructuras de control como un verdadero programador.
           </p>
         </div>
 
-        {/* Continue Button with Pulse Effect */}
+        {/* Continue Button with Tactile 3D and Pulse Effect */}
         <button
           onClick={() => {
             onClose();
             onNextExercise();
           }}
-          className="w-full py-4 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold text-base rounded-xl shadow-lg pulse-btn transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+          className="btn-game-success w-full py-4 px-6 text-base rounded-xl pulse-btn flex items-center justify-center gap-2"
         >
           <span>Continuar</span>
           <span className="material-symbols-outlined text-xl">arrow_forward</span>

@@ -105,56 +105,56 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
 
   return (
     <div className="bg-[#f8f9ff] min-h-screen flex flex-col antialiased">
-      {/* Top App Bar (Exercise Context) */}
-      <header className="bg-white sticky top-[37px] z-40 border-b border-slate-200">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 w-full max-w-4xl mx-auto">
+      {/* Top Chrome / Navy Context Bar */}
+      <header className="bg-[#0b1c30] text-white sticky top-0 z-40 border-b border-white/10 shadow-md">
+        <div className="flex items-center justify-between px-4 md:px-8 py-3 w-full max-w-5xl mx-auto">
           <button
             onClick={() => onNavigate('unit_detail')}
-            className="text-[#434655] hover:bg-slate-100 rounded-full p-2 transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
-            aria-label="Cerrar ejercicio"
+            className="text-slate-300 hover:text-white hover:bg-white/10 rounded-xl p-2 transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
+            aria-label="Volver a la unidad"
           >
-            <span className="material-symbols-outlined text-2xl">close</span>
+            <span className="material-symbols-outlined text-2xl">arrow_back</span>
           </button>
 
-          <div className="flex flex-col items-center">
-            <span className="text-[11px] font-bold text-[#737686] uppercase tracking-wider">
-              Programación 1
+          <div className="flex flex-col items-center text-center">
+            <span className="text-[10px] sm:text-[11px] font-bold text-blue-300 uppercase tracking-wider">
+              Programación 1 • Unidad 2
             </span>
-            <h1 className="font-heading font-bold text-lg text-[#004ac6] tracking-tight">
-              Unidad 2: Variables
+            <h1 className="font-heading font-bold text-base sm:text-lg text-white tracking-tight">
+              {exercise.title}
             </h1>
           </div>
 
           {/* Quick exercise switcher pill */}
-          <div className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-full text-xs font-semibold text-[#434655]">
-            <span>Ex {exerciseIndex + 1}/{unit2.exercises.length}</span>
+          <div className="flex items-center gap-1 bg-white/10 border border-white/15 px-3 py-1 rounded-full text-xs font-semibold text-blue-100">
+            <span>Ej. {exerciseIndex + 1}/{unit2.exercises.length}</span>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-slate-100">
+        {/* Navy Sub-progress Bar */}
+        <div className="w-full h-1 bg-white/10">
           <div 
-            className="h-full bg-[#2563eb] rounded-r-full transition-all duration-500" 
+            className="h-full bg-[#ffb95f] transition-all duration-500 shadow-[0_0_8px_rgba(255,185,95,0.7)]" 
             style={{ width: `${((exerciseIndex + 1) / unit2.exercises.length) * 100}%` }}
           />
         </div>
       </header>
 
       {/* Main Coding Canvas */}
-      <main className="flex-grow flex flex-col items-center px-4 py-6 w-full max-w-3xl mx-auto gap-5 pb-32">
-        {/* Instruction Card with Carpincho avatar */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-5 shadow-[0px_4px_16px_rgba(0,0,0,0.04)] w-full flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden border-2 border-blue-400 shadow-sm bg-blue-50">
+      <main className="flex-grow flex flex-col items-center px-4 py-6 w-full max-w-4xl mx-auto gap-5 pb-32">
+        {/* Instruction Card */}
+        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 md:p-5 shadow-[0px_4px_16px_rgba(0,0,0,0.04)] w-full flex items-start gap-4">
+          <div className="flex-shrink-0 w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-200 shadow-xs bg-blue-50 flex items-center justify-center">
             <img 
               src={MASCOT_IMAGES.roundAvatar} 
-              alt="Carpincho" 
+              alt="Carpincho Tutor" 
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="flex-grow">
+          <div className="flex-grow min-w-0">
             <div className="bg-[#eff4ff] p-4 rounded-2xl rounded-tl-none relative border border-blue-100">
               <span className="text-[11px] font-bold text-[#2563eb] uppercase tracking-wider block mb-1">
-                {exercise.title}
+                Instrucción
               </span>
               <p className="text-sm md:text-base text-[#0b1c30] leading-relaxed">
                 {exercise.instruction}
@@ -166,32 +166,32 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
         {/* Code Editor Container */}
         <div className="w-full flex flex-col gap-2">
           <div className="flex justify-between items-center px-2">
-            <span className="text-xs font-semibold text-[#434655] flex items-center gap-1 font-mono">
+            <span className="text-xs font-semibold text-[#434655] flex items-center gap-1.5 font-mono">
               <span className="material-symbols-outlined text-sm text-[#2563eb]">code</span>
               main.py
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowHintModal(true)}
-                className="text-xs font-semibold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-xs">lightbulb</span>
+                <span className="material-symbols-outlined text-sm text-amber-600">lightbulb</span>
                 Pista
               </button>
               <button
                 onClick={handleReset}
-                className="text-xs font-semibold text-[#004ac6] hover:text-[#2563eb] flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-slate-600 hover:text-[#2563eb] bg-white border border-slate-200 hover:border-blue-200 px-3 py-1 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-xs">refresh</span>
+                <span className="material-symbols-outlined text-sm">refresh</span>
                 Reiniciar
               </button>
             </div>
           </div>
 
           {/* Dark Mac-style Code Window */}
-          <div className="bg-[#0f172a] rounded-2xl overflow-hidden shadow-xl flex flex-col border border-slate-800 focus-within:ring-2 focus-within:ring-[#2563eb]/60 transition-all">
+          <div className="bg-[#0b1c30] rounded-2xl overflow-hidden shadow-xl flex flex-col border border-slate-700/80 focus-within:ring-2 focus-within:ring-blue-400 transition-all">
             {/* Window Header */}
-            <div className="bg-[#1e293b] px-4 py-2.5 flex items-center justify-between border-b border-slate-700/60">
+            <div className="bg-[#071322] px-4 py-2.5 flex items-center justify-between border-b border-white/10">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500/90" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/90" />
@@ -203,7 +203,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
             {/* Editor Body */}
             <div className="flex w-full min-h-[220px] text-[#e2e8f0] font-mono text-sm">
               {/* Line Numbers */}
-              <div className="w-10 bg-[#1e293b]/40 text-right pr-3 py-4 text-slate-500 select-none border-r border-slate-800 text-xs">
+              <div className="w-10 bg-[#071322]/60 text-right pr-3 py-4 text-slate-500 select-none border-r border-white/10 text-xs">
                 {code.split('\n').map((_, i) => (
                   <div key={i} className="leading-[26px]">
                     {i + 1}
@@ -216,7 +216,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
                 <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full h-full min-h-[190px] bg-transparent text-[#e2e8f0] font-mono text-sm leading-[26px] focus:outline-none resize-none caret-blue-400 selection:bg-blue-600/40"
+                  className="w-full h-full min-h-[190px] bg-transparent text-[#e2e8f0] font-mono text-sm leading-[26px] focus:outline-none resize-none caret-[#ffb95f] selection:bg-blue-600/40"
                   spellCheck={false}
                   placeholder="# Escribe tu código aquí..."
                 />
@@ -226,19 +226,19 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
 
           {/* Quick test preset helpers */}
           <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 px-1 pt-1 gap-2">
-            <span className="text-[11px]">Pruebas rápidas:</span>
+            <span className="text-[11px] font-medium">Pruebas rápidas:</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setCode('nombre = "Facu"')}
-                className="px-2 py-0.5 rounded bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[11px] font-mono"
+                className="px-2.5 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[11px] font-mono cursor-pointer transition-colors"
               >
                 nombre = "Facu" (correcto)
               </button>
               <button
                 type="button"
                 onClick={() => setCode('nombre = Facundo')}
-                className="px-2 py-0.5 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-mono"
+                className="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-[11px] font-mono cursor-pointer transition-colors"
               >
                 nombre = Facundo (sin comillas)
               </button>
@@ -246,14 +246,14 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="w-full pt-2">
+        {/* 3D Tactile Action CTA Button */}
+        <div className="w-full pt-3">
           <button
             onClick={handleRunCode}
-            className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-base py-4 rounded-xl shadow-[0_4px_16px_rgba(37,99,235,0.3)] border-b-4 border-[#1e40af] active:border-b-0 active:translate-y-1 transition-all flex justify-center items-center gap-2 cursor-pointer"
+            className="btn-game-amber w-full py-4 text-base flex justify-center items-center gap-2"
           >
-            <span className="material-symbols-outlined text-xl fill">play_arrow</span>
-            <span>Ejecutar Código</span>
+            <span className="material-symbols-outlined text-2xl fill">play_arrow</span>
+            <span>Ejecutar y Verificar Código</span>
           </button>
         </div>
       </main>
@@ -271,7 +271,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
         </div>
 
         <div className="flex flex-col items-end">
-          <span className="text-[11px] font-semibold text-[#737686]">Progreso</span>
+          <span className="text-[11px] font-semibold text-[#737686]">Progreso en unidad</span>
           <span className="text-sm font-extrabold text-[#2563eb]">
             {exerciseIndex + 1} / {unit2.exercises.length}
           </span>
