@@ -104,9 +104,9 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
   };
 
   return (
-    <div className="bg-[#f8f9ff] min-h-screen flex flex-col antialiased">
-      {/* Top Chrome / Navy Context Bar */}
-      <header className="bg-[#0b1c30] text-white sticky top-0 z-40 border-b border-white/10 shadow-md">
+    <div className="bg-[#f8f9ff] flex-1 flex flex-col antialiased">
+      {/* Top Chrome / Navy Context Bar (sits right below the global h-16 Navigation) */}
+      <header className="bg-[#0b1c30] text-white sticky top-16 z-40 border-b border-white/10 shadow-md">
         <div className="flex items-center justify-between px-4 md:px-8 py-3 w-full max-w-5xl mx-auto">
           <button
             onClick={() => onNavigate('unit_detail')}

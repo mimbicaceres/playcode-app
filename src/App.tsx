@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ScreenView, UserProfile, UserRole, Course } from './types';
 import { INITIAL_USER } from './data/mockData';
+import { getPathForView, getViewForPath } from './routes';
 import { Navigation } from './components/Navigation';
 import { WelcomeView } from './components/WelcomeView';
 import { LoginView } from './components/LoginView';
@@ -17,7 +19,10 @@ import { StudentDetailTeacherView } from './components/StudentDetailTeacherView'
 import { AdminDashboardView } from './components/AdminDashboardView';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<ScreenView>('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentView = getViewForPath(location.pathname);
+  const setCurrentView = (view: ScreenView) => navigate(getPathForView(view));
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ex1');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -159,7 +164,7 @@ const handleRoleChange = (newRole: UserRole) => {
           />
         )}
 
-        {(currentView as string) === 'student_detail' && (
+        {(currentView === 'teacher_student_detail' || (currentView as string) === 'student_detail') && (
           <StudentDetailTeacherView onNavigate={setCurrentView} />
         )}
 
