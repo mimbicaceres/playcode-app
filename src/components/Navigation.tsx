@@ -1,18 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ScreenView, UserProfile, UserRole } from '../types';
+import { ScreenView, UserProfile } from '../types';
+import { canAccessView, getHomeView } from '../auth/access';
 
 interface NavigationProps {
   currentView: ScreenView;
   onNavigate: (view: ScreenView) => void;
   user: UserProfile;
-  onRoleChange: (role: UserRole) => void;
+  onLogout: () => void;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ 
   currentView, 
   onNavigate, 
   user, 
-  onRoleChange 
+  onLogout 
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -27,18 +28,22 @@ export const Navigation: React.FC<NavigationProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // The role comes from the authenticated session; the UI never changes it.
+  // Only views this role may open are offered (the router guard enforces it too).
+  const homeView = getHomeView(user.role);
+
   const navItems = [
-    { id: 'dashboard' as ScreenView, label: 'Inicio' },
+    { id: homeView, label: 'Inicio' },
     { id: 'courses_map' as ScreenView, label: 'Cursos' },
     { id: 'reports' as ScreenView, label: 'Progreso' },
     { id: 'profile' as ScreenView, label: 'Perfil' },
-  ];
+  ].filter((item) => canAccessView(item.id, user.role));
 
   const panelItems = [
-    { id: 'dashboard' as ScreenView, role: 'student' as UserRole, label: 'Panel Alumno', icon: '🎓' },
-    { id: 'teacher_dashboard' as ScreenView, role: 'teacher' as UserRole, label: 'Panel Docente', icon: '👨‍🏫' },
-    { id: 'admin_dashboard' as ScreenView, role: 'admin' as UserRole, label: 'Admin Institucional', icon: '⚙️' },
-  ];
+    { id: 'dashboard' as ScreenView, label: 'Panel Alumno', icon: '🎓' },
+    { id: 'teacher_dashboard' as ScreenView, label: 'Panel Docente', icon: '👨‍🏫' },
+    { id: 'admin_dashboard' as ScreenView, label: 'Admin Institucional', icon: '⚙️' },
+  ].filter((panel) => canAccessView(panel.id, user.role));
 
   return (
     <header className="bg-[#0a1c30] text-white sticky top-0 z-50 shadow-md">
@@ -46,6 +51,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         
         {/* Izquierda: Menú Hamburguesa + Logo */}
         <div className="flex items-center gap-4">
+          {panelItems.length > 1 && (
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -68,8 +74,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     <button
                       key={panel.id}
                       onClick={() => {
-                        onRoleChange(panel.role); // 👈 CAMBIA EL ROL GLOBAL
-                        onNavigate(panel.id);     // 👈 CAMBIA LA PANTALLA
+                        onNavigate(panel.id);
                         setIsMenuOpen(false);
                       }}
                       className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-3 transition-colors cursor-pointer
@@ -86,12 +91,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               </div>
             )}
           </div>
+          )}
 
           <div 
-            onClick={() => {
-              onRoleChange('student');
-              onNavigate('dashboard');
-            }}
+            onClick={() => onNavigate(homeView)}
             className="flex items-center gap-2 cursor-pointer"
           >
             <span className="font-heading font-bold text-xl tracking-wide text-blue-400">PlayCode</span>
@@ -105,10 +108,7 @@ export const Navigation: React.FC<NavigationProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  if (user.role !== 'student') onRoleChange('student');
-                  onNavigate(item.id);
-                }}
+                onClick={() => onNavigate(item.id)}
                 className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors duration-150 cursor-pointer
                   ${isActive 
                     ? 'bg-blue-600 text-white shadow-sm' 
@@ -121,7 +121,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           })}
         </nav>
 
-        {/* Derecha: Perfil de usuario dinámico */}
+        {/* Derecha: Perfil de usuario dinámico + cerrar sesión */}
+        <div className="flex items-center gap-3">
         <div 
           onClick={() => onNavigate('profile')}
           className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
@@ -135,6 +136,15 @@ export const Navigation: React.FC<NavigationProps> = ({
             <div className="font-semibold">{user.name}</div>
             <div className="text-blue-300 capitalize">{user.role === 'student' ? (user.grade || '4to Año') : user.role}</div>
           </div>
+        </div>
+        <button
+          onClick={onLogout}
+          className="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/55 transition-colors cursor-pointer"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+        >
+          <span className="material-symbols-outlined text-xl">logout</span>
+        </button>
         </div>
 
       </div>

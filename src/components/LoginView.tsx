@@ -4,24 +4,33 @@ import { MASCOT_IMAGES } from '../data/mockData';
 
 interface LoginViewProps {
   onNavigate: (view: ScreenView) => void;
-  onLoginSuccess: (email: string) => void;
+  // Resolves to an error message to display, or null on success (App redirects by role).
+  onLogin: (email: string, password: string) => Promise<string | null>;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => {
   const [email, setEmail] = useState('estudiante@ejemplo.com');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('Email o contrasena incorrectos');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || password.length < 4) {
+      setErrorMessage('Email o contrasena incorrectos');
       setShowError(true);
       return;
     }
     setShowError(false);
-    onLoginSuccess(email);
-    onNavigate('dashboard');
+    setIsSubmitting(true);
+    const error = await onLogin(email, password);
+    setIsSubmitting(false);
+    if (error) {
+      setErrorMessage(error);
+      setShowError(true);
+    }
   };
 
   return (
@@ -85,15 +94,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
               {showError && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
                   <span className="material-symbols-outlined text-red-600 text-[20px]">error</span>
-                  <p className="text-sm font-medium">Email o contrasena incorrectos</p>
+                  <p className="text-sm font-medium">{errorMessage}</p>
                 </div>
               )}
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full h-12 mt-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] border-b-2 border-[#1e40af] active:border-b-0 active:translate-y-0.5 transition-all cursor-pointer"
+                disabled={isSubmitting}
+                className="w-full h-12 mt-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(37,99,235,0.25)] border-b-2 border-[#1e40af] active:border-b-0 active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                <span>Ingresar</span>
+                <span>{isSubmitting ? 'Ingresando...' : 'Ingresar'}</span>
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
               <div className="flex justify-end text-xs mt-1">
@@ -109,7 +119,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLoginSuccess
             {/* Tip */}
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-start gap-3 bg-blue-50/60 p-3 rounded-xl">
               <span className="text-xl">&#128161;</span>
-              <p className="text-xs text-slate-600 leading-relaxed"><strong>Tip:</strong> Puedes ingresar con cualquier email para explorar el curso de Python y ejercicios interactivos.</p>
+              <p className="text-xs text-slate-600 leading-relaxed"><strong>Tip:</strong> En desarrollo podés usar las cuentas demo estudiante@ejemplo.com, docente@ejemplo.com o admin@ejemplo.com (contraseña: password123).</p>
             </div>
           </div>
           {/* Footer Link */}
