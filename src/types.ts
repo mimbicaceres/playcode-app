@@ -73,6 +73,8 @@ export interface Course {
   completedLessons: number;
   totalLessons: number;
   units: Unit[];
+  status: 'locked' | 'available' | 'in_progress' | 'completed';
+  prerequisiteId?: string;
 }
 
 export interface AchievementBadge {

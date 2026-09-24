@@ -57,6 +57,7 @@ export const COURSES_DATA: Course[] = [
     progressPercent: 100,
     completedLessons: 12,
     totalLessons: 12,
+    status: 'in_progress',
     units: [
       {
         id: 'u1',
@@ -176,6 +177,8 @@ export const COURSES_DATA: Course[] = [
     progressPercent: 45,
     completedLessons: 4,
     totalLessons: 10,
+    status: 'available',
+    prerequisiteId: 'prog1',
     units: []
   },
   {
@@ -189,9 +192,11 @@ export const COURSES_DATA: Course[] = [
     accentBorder: '#D97706',
     iconName: 'coffee',
     logoUrl: LOGO_IMAGES.java,
-    progressPercent: 100,
-    completedLessons: 15,
+    progressPercent: 0,
+    completedLessons: 0,
     totalLessons: 15,
+    status: 'locked',
+    prerequisiteId: 'py2',
     units: []
   },
   {
@@ -204,9 +209,11 @@ export const COURSES_DATA: Course[] = [
     color: '#EAB308',
     accentBorder: '#EAB308',
     iconName: 'javascript',
-    progressPercent: 65,
-    completedLessons: 13,
+    progressPercent: 0,
+    completedLessons: 0,
     totalLessons: 20,
+    status: 'locked',
+    prerequisiteId: 'java3',
     units: []
   },
   {
@@ -219,9 +226,11 @@ export const COURSES_DATA: Course[] = [
     color: '#0284C7',
     accentBorder: '#0284C7',
     iconName: 'css',
-    progressPercent: 20,
-    completedLessons: 4,
+    progressPercent: 0,
+    completedLessons: 0,
     totalLessons: 20,
+    status: 'locked',
+    prerequisiteId: 'js_base',
     units: []
   }
 ];

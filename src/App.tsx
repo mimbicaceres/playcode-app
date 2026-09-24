@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenView, UserProfile, UserRole } from './types';
+import { ScreenView, UserProfile, UserRole, Course } from './types';
 import { INITIAL_USER } from './data/mockData';
 import { Navigation } from './components/Navigation';
 import { WelcomeView } from './components/WelcomeView';
@@ -20,6 +20,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ScreenView>('dashboard');
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ex1');
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   const handleAddXp = (amount: number) => {
     setUser((prev: UserProfile) => ({
@@ -114,11 +115,11 @@ const handleRoleChange = (newRole: UserRole) => {
         )}
 
         {currentView === 'courses_map' && (
-          <CourseMapView onNavigate={setCurrentView} />
+          <CourseMapView onNavigate={setCurrentView} onSelectCourse={setSelectedCourse} />
         )}
 
         {currentView === 'course_roadmap' && (
-          <CourseRoadmapView onNavigate={setCurrentView} />
+          <CourseRoadmapView onNavigate={setCurrentView} course={selectedCourse} />
         )}
 
         {currentView === 'unit_detail' && (
