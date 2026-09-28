@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
-import { ScreenView } from '../types';
-import { AVATAR_IMAGES, EXERCISE_HISTORY, BADGES } from '../data/mockData';
+import { ScreenView, StudentAuditData } from '../types';
 import { StatusHud } from './ui/StatusHud';
 import { SegmentedProgressBar } from './ui/SegmentedProgressBar';
 
 interface StudentDetailTeacherViewProps {
+  // Demo mode passes DEMO_STUDENT_AUDIT from mockData; real teachers pass their own data.
+  data: StudentAuditData;
   onNavigate: (view: ScreenView) => void;
 }
 
-export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> = ({ onNavigate }) => {
+const NO_STUDENTS_MESSAGE = 'Todavía no tenés alumnos asignados.';
+
+export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> = ({ data, onNavigate }) => {
   const [showMessageBox, setShowMessageBox] = useState(false);
   const [messageSent, setMessageSent] = useState(false);
   const [messageText, setMessageText] = useState('');
+
+  const hasStudent = data.studentName !== null;
+  const unlockedBadges = data.badges.filter((badge) => badge.unlocked).length;
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +32,15 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 pb-32 flex flex-col gap-6">
-      
+
       {/* Top Status HUD in compact mode - Student being audited */}
       <StatusHud
         compact={true}
-        avatarUrl={AVATAR_IMAGES.facuPhoto}
+        avatarUrl={data.avatarUrl}
+        avatarIcon={data.avatarUrl ? undefined : 'groups'}
         badgeText="Auditoría de Alumno"
-        title="Facundo G."
-        subtitle="Colegio San Martín • 4to Año 'A' • Registro Académico: #EST-8492"
+        title={data.studentName ?? 'Alumnos'}
+        subtitle={data.subtitle}
       >
         <button
           onClick={() => onNavigate('teacher_dashboard')}
@@ -43,6 +50,7 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
           <span>Volver al Panel</span>
         </button>
 
+        {hasStudent && (
         <button
           onClick={() => setShowMessageBox(!showMessageBox)}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
@@ -50,15 +58,16 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
           <span className="material-symbols-outlined text-base">mail</span>
           <span>{showMessageBox ? 'Cerrar Mensaje' : 'Enviar Devolución'}</span>
         </button>
+        )}
       </StatusHud>
 
       {/* Message Form (Collapsible) */}
-      {showMessageBox && (
+      {showMessageBox && hasStudent && (
         <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-5 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-blue-700 font-semibold text-sm">
               <span className="material-symbols-outlined text-lg">edit_note</span>
-              <span>Mensaje Pedagógico / Feedback Directo para Facundo</span>
+              <span>Mensaje Pedagógico / Feedback Directo para {data.studentName}</span>
             </div>
             <button
               onClick={() => setShowMessageBox(false)}
@@ -104,10 +113,10 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
 
       {/* Main Grid: Left Column (Summary & Badges) vs Right Column (Analytics & History) */}
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Left Column (5 cols) */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          
+
           {/* General Progress Card using SegmentedProgressBar */}
           <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -115,12 +124,12 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
                 Rendimiento Curricular
               </h2>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                78% Global
+                {data.overallProgress}% Global
               </span>
             </div>
 
             <SegmentedProgressBar
-              percentage={78}
+              percentage={data.overallProgress}
               totalSegments={20}
               label="Avance en Plan de Estudios Anual"
               activeColor="#2563eb"
@@ -129,11 +138,11 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Ejercicios Resueltos</span>
-                <span className="font-sans font-bold text-xl text-[#0b1c30] mt-0.5 block">28 / 36</span>
+                <span className="font-sans font-bold text-xl text-[#0b1c30] mt-0.5 block">{data.exercisesSolved} / {data.exercisesTotal}</span>
               </div>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Tiempo en Plataforma</span>
-                <span className="font-sans font-bold text-xl text-[#0b1c30] mt-0.5 block">14h 20m</span>
+                <span className="font-sans font-bold text-xl text-[#0b1c30] mt-0.5 block">{data.platformTime}</span>
               </div>
             </div>
           </div>
@@ -148,20 +157,23 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
                 <p className="text-[11px] text-slate-500">Auditoría de competencias desbloqueadas</p>
               </div>
               <span className="font-mono text-xs font-bold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                3 / 4 Desbloqueadas
+                {unlockedBadges} / {data.badges.length} Desbloqueadas
               </span>
             </div>
 
             <div className="divide-y divide-slate-100">
-              {BADGES.map((badge) => (
-                <div 
+              {data.badges.length === 0 && (
+                <p className="p-6 text-xs text-slate-400 text-center">{NO_STUDENTS_MESSAGE}</p>
+              )}
+              {data.badges.map((badge) => (
+                <div
                   key={badge.id}
                   className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                      badge.unlocked 
-                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                      badge.unlocked
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
                         : 'bg-slate-100 text-slate-400 border-slate-200'
                     }`}>
                       <span className="material-symbols-outlined text-base">
@@ -194,32 +206,27 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
 
         {/* Right Column (7 cols): Performance Metrics & History Table */}
         <div className="lg:col-span-7 flex flex-col gap-6">
-          
+
           {/* Metrics Row: XP Growth & Accuracy */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
+
             {/* XP Growth Card */}
             <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Crecimiento de XP</span>
-                <span className="font-mono text-xs font-bold text-blue-700">2,450 XP Total</span>
+                <span className="font-mono text-xs font-bold text-blue-700">{data.totalXp.toLocaleString('en-US')} XP Total</span>
               </div>
               <div className="h-28 w-full bg-slate-50 rounded-xl relative overflow-hidden flex items-end px-3 gap-2.5 pb-2 border border-slate-100">
-                <div className="w-full bg-blue-200 rounded-t h-[25%] relative group hover:bg-blue-300 transition-colors">
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">120</span>
-                </div>
-                <div className="w-full bg-blue-300 rounded-t h-[40%] relative group hover:bg-blue-400 transition-colors">
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">250</span>
-                </div>
-                <div className="w-full bg-blue-300 rounded-t h-[35%] relative group hover:bg-blue-400 transition-colors">
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">210</span>
-                </div>
-                <div className="w-full bg-blue-400 rounded-t h-[65%] relative group hover:bg-blue-500 transition-colors">
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">450</span>
-                </div>
-                <div className="w-full bg-blue-600 rounded-t h-[88%] relative group transition-colors">
-                  <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">620</span>
-                </div>
+                {data.weeklyXp.length === 0 && (
+                  <p className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-slate-400">
+                    Sin actividad registrada
+                  </p>
+                )}
+                {data.weeklyXp.map((week, index) => (
+                  <div key={index} className={`w-full ${week.barClass} rounded-t relative group transition-colors`} style={{ height: `${week.percent}%` }}>
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-slate-700 opacity-0 group-hover:opacity-100">{week.xp}</span>
+                  </div>
+                ))}
               </div>
               <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1 px-1">
                 <span>Sem 1</span>
@@ -234,7 +241,9 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
             <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col justify-between">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Precisión Promedio</span>
-                <span className="text-emerald-700 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Alta</span>
+                {data.accuracyLabel && (
+                  <span className="text-emerald-700 text-xs font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{data.accuracyLabel}</span>
+                )}
               </div>
               <div className="flex items-center justify-center py-2">
                 <div className="relative w-24 h-24">
@@ -246,23 +255,25 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
                       stroke="currentColor"
                       strokeWidth="3.5"
                     />
-                    <path
-                      className="text-emerald-600"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeDasharray="85, 100"
-                      strokeLinecap="round"
-                      strokeWidth="3.5"
-                    />
+                    {data.accuracy > 0 && (
+                      <path
+                        className="text-emerald-600"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeDasharray={`${data.accuracy}, 100`}
+                        strokeLinecap="round"
+                        strokeWidth="3.5"
+                      />
+                    )}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-sans font-bold text-2xl text-[#0b1c30]">85%</span>
+                    <span className="font-sans font-bold text-2xl text-[#0b1c30]">{data.accuracy}%</span>
                     <span className="text-[10px] text-slate-500 font-medium">Asertividad</span>
                   </div>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-500 text-center">1 error registrado en 4 entregas</p>
+              <p className="text-[11px] text-slate-500 text-center">{data.accuracyNote}</p>
             </div>
 
           </div>
@@ -276,7 +287,7 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
                 </h2>
                 <p className="text-[11px] text-slate-500">Registro cronológico de evaluaciones y envíos</p>
               </div>
-              <span className="text-xs text-slate-500 font-medium">4 registros</span>
+              <span className="text-xs text-slate-500 font-medium">{data.history.length} registros</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -290,7 +301,16 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
                   </tr>
                 </thead>
                 <tbody className="text-xs font-medium text-[#0b1c30] divide-y divide-slate-100">
-                  {EXERCISE_HISTORY.map((hist) => (
+                  {data.history.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-10 px-4 text-center">
+                        <span className="material-symbols-outlined text-3xl text-slate-300 block mb-1">groups</span>
+                        <p className="text-sm font-semibold text-slate-600">{NO_STUDENTS_MESSAGE}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Acá vas a ver las entregas y resultados de tus alumnos.</p>
+                      </td>
+                    </tr>
+                  )}
+                  {data.history.map((hist) => (
                     <tr key={hist.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
                         {hist.date}

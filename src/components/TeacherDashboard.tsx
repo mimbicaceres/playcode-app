@@ -1,35 +1,29 @@
 import React, { useState } from 'react';
-import { ScreenView } from '../types';
-import { RECENT_ACTIVITIES } from '../data/mockData';
+import { ScreenView, TeacherCourseSummary, TeacherDashboardData } from '../types';
 import { StatusHud } from './ui/StatusHud';
 import { NewCourseModal } from './Modals/NewCourseModal';
 
 interface TeacherDashboardProps {
+  // Real teachers get their own data (zeros until something is assigned);
+  // demo mode passes DEMO_TEACHER_DASHBOARD from mockData.
+  data: TeacherDashboardData;
   onNavigate: (view: ScreenView) => void;
   onSelectStudentDetail: () => void;
-}
-
-interface TeacherCourseItem {
-  id: string;
-  name: string;
-  students: number;
-  progress: number;
-  icon: string;
-  category: string;
-  status: 'Activo' | 'Pausado';
+  // Links are only shown for views the current user may open.
+  canOpen: (view: ScreenView) => boolean;
+  // "Nuevo Curso" only adds to local state (no backend yet), so it is demo-only.
+  allowCourseCreation?: boolean;
 }
 
 export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
+  data,
   onNavigate,
-  onSelectStudentDetail
+  onSelectStudentDetail,
+  canOpen,
+  allowCourseCreation = false
 }) => {
   const [isNewCourseModalOpen, setIsNewCourseModalOpen] = useState(false);
-  const [coursesList, setCoursesList] = useState<TeacherCourseItem[]>([
-    { id: 'c1', name: 'Introducción a HTML/CSS', students: 45, progress: 82, icon: 'html', category: 'Frontend', status: 'Activo' },
-    { id: 'c2', name: 'Lógica con JavaScript', students: 38, progress: 45, icon: 'javascript', category: 'Lógica', status: 'Activo' },
-    { id: 'c3', name: 'Estructuras de Datos', students: 59, progress: 60, icon: 'data_object', category: 'Algoritmos', status: 'Activo' },
-    { id: 'c4', name: 'Bases de Datos SQL', students: 24, progress: 15, icon: 'database', category: 'Backend', status: 'Pausado' }
-  ]);
+  const [coursesList, setCoursesList] = useState<TeacherCourseSummary[]>(data.courses);
 
   const handleAddCourse = (newCourse: { title: string; category: string; description: string }) => {
     setCoursesList(prev => [
@@ -58,83 +52,6 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] bg-[#f8f9ff]">
-      {/* Teacher Sidebar Navigation - Professional & Clean */}
-      <aside className="w-full md:w-64 bg-white border-r border-[#e2e8f0] flex flex-col shrink-0 shadow-xs">
-        {/* Brand in Sidebar */}
-        <div className="p-5 border-b border-[#e2e8f0] flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#004ac6]">
-            <span className="material-symbols-outlined text-2xl">school</span>
-          </div>
-          <div className="min-w-0">
-            <span className="font-heading font-extrabold text-lg text-[#004ac6] tracking-tight block leading-tight">
-              PlayCode
-            </span>
-            <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Gestión Docente
-            </span>
-          </div>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <button 
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-xs text-left shadow-xs cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[19px]">dashboard</span>
-            <span>Panel de Control</span>
-          </button>
-
-          <button 
-            onClick={() => onNavigate('courses_map')}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-blue-700 font-semibold text-xs transition-colors text-left cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[19px]">menu_book</span>
-            <span>Cursos Asignados</span>
-          </button>
-
-          <button 
-            onClick={onSelectStudentDetail}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-blue-700 font-semibold text-xs transition-colors text-left cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[19px]">groups</span>
-            <span>Alumnos (Auditoría)</span>
-          </button>
-
-          <button 
-            onClick={() => onNavigate('reports')}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-blue-700 font-semibold text-xs transition-colors text-left cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[19px]">analytics</span>
-            <span>Reportes & Rendimiento</span>
-          </button>
-
-          <button 
-            onClick={() => onNavigate('admin_dashboard')}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-blue-700 font-semibold text-xs transition-colors text-left cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[19px]">shield_person</span>
-            <span>Administración General</span>
-          </button>
-        </nav>
-
-        {/* Teacher profile at bottom */}
-        <div className="p-4 border-t border-[#e2e8f0] bg-slate-50/60">
-          <button 
-            onClick={() => onNavigate('profile')}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-white hover:shadow-xs text-xs font-semibold text-left transition-all cursor-pointer border border-transparent hover:border-slate-200"
-          >
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-              SR
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-slate-800 truncate text-xs">Prof. Santiago R.</p>
-              <p className="text-[10px] text-slate-500 truncate">Docente Titular</p>
-            </div>
-            <span className="material-symbols-outlined text-slate-400 text-sm">settings</span>
-          </button>
-        </div>
-      </aside>
-
       {/* Main Panel Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-32">
         <div className="max-w-6xl mx-auto space-y-6">
@@ -144,9 +61,10 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             compact={true}
             avatarIcon="school"
             badgeText="Portal Docente"
-            title="Prof. Santiago Ramos"
-            subtitle="Colegio San Martín • Dpto. Ciencias de la Computación"
+            title={data.teacherName}
+            subtitle={data.subtitle}
           >
+            {allowCourseCreation && (
             <button
               onClick={() => setIsNewCourseModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-98"
@@ -154,6 +72,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Nuevo Curso</span>
             </button>
+            )}
           </StatusHud>
 
           {/* Key Metrics - Clean Soft-cards */}
@@ -168,12 +87,18 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">142</span>
+                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">{data.totalStudents}</span>
+                  {data.studentsTrend && (
                   <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-xs">trending_up</span> +12%
+                    <span className="material-symbols-outlined text-xs">trending_up</span> {data.studentsTrend}
                   </span>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Distribuidos en 4 comisiones activas</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {data.activeGroups > 0
+                    ? `Distribuidos en ${data.activeGroups} comisiones activas`
+                    : 'Todavía no tenés comisiones asignadas'}
+                </p>
               </div>
             </div>
 
@@ -187,11 +112,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">68%</span>
+                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">{data.averageProgress}%</span>
                   <span className="text-xs text-slate-500 font-medium">Promedio de cohortes</span>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full mt-2.5 overflow-hidden">
-                  <div className="h-full bg-emerald-600 rounded-full" style={{ width: '68%' }} />
+                  <div className="h-full bg-emerald-600 rounded-full" style={{ width: `${data.averageProgress}%` }} />
                 </div>
               </div>
             </div>
@@ -206,12 +131,16 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">34</span>
+                  <span className="font-sans font-bold text-3xl text-[#0b1c30]">{data.submissionsToday}</span>
                   <span className="text-slate-600 bg-slate-100 text-[11px] font-semibold px-2 py-0.5 rounded-md">
-                    2 pendientes de feedback
+                    {data.pendingFeedback} pendientes de feedback
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Última entrega registrada hace 12 min</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {data.lastSubmission
+                    ? `Última entrega registrada ${data.lastSubmission}`
+                    : 'Todavía no hay entregas registradas'}
+                </p>
               </div>
             </div>
           </section>
@@ -228,13 +157,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   </h2>
                   <p className="text-xs text-slate-500">Gestión de cohortes, estado y avance por módulo</p>
                 </div>
-                <button 
+                {canOpen('courses_map') && (
+                <button
                   onClick={() => onNavigate('courses_map')}
                   className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span>Ver mapa completo</span>
                   <span className="material-symbols-outlined text-sm">chevron_right</span>
                 </button>
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -249,6 +180,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     </tr>
                   </thead>
                   <tbody className="text-xs font-medium text-[#0b1c30] divide-y divide-slate-100">
+                    {coursesList.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-10 px-4 text-center">
+                          <span className="material-symbols-outlined text-3xl text-slate-300 block mb-1">menu_book</span>
+                          <p className="text-sm font-semibold text-slate-600">Todavía no tenés cursos asignados.</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Cuando un administrador te asigne cursos, van a aparecer acá.</p>
+                        </td>
+                      </tr>
+                    )}
                     {coursesList.map((c) => (
                       <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3.5 px-4">
@@ -316,7 +256,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
 
               <div className="p-3 flex-1 divide-y divide-slate-100">
-                {RECENT_ACTIVITIES.map((act) => (
+                {data.activities.length === 0 && (
+                  <div className="py-10 px-2 text-center">
+                    <span className="material-symbols-outlined text-3xl text-slate-300 block mb-1">groups</span>
+                    <p className="text-sm font-semibold text-slate-600">Todavía no tenés alumnos asignados.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Acá vas a ver la actividad de tus alumnos.</p>
+                  </div>
+                )}
+                {data.activities.map((act) => (
                   <div
                     key={act.id}
                     onClick={onSelectStudentDetail}

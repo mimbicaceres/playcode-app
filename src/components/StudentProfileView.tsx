@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
-import { ScreenView, UserProfile } from '../types';
-import { BADGES, MASCOT_IMAGES } from '../data/mockData';
+import { AchievementBadge, ScreenView, UserProfile } from '../types';
+import { MASCOT_IMAGES } from '../data/mockData';
 import { EditProfileModal } from './Modals/EditProfileModal';
 import { StatusHud } from './ui/StatusHud';
 import { ColorBlockHero } from './ui/ColorBlockHero';
 
 interface StudentProfileViewProps {
   user: UserProfile;
+  badges: AchievementBadge[];
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onNavigate: (view: ScreenView) => void;
 }
 
 export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
   user,
+  badges,
   onUpdateProfile,
   onNavigate
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const unlockedBadges = badges.filter((badge) => badge.unlocked).length;
+  const hasAssignedCourses = user.assignedCourseIds.length > 0;
+  const schoolAndGrade = [user.school, user.grade].filter(Boolean).join(' • ');
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6 md:py-8 pb-32 flex flex-col gap-6">
@@ -25,7 +30,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         avatarUrl={user.avatarUrl || MASCOT_IMAGES.roundAvatar}
         badgeText="Perfil de Usuario"
         title={`${user.name} ${user.lastName}`}
-        subtitle={`${user.school} • ${user.grade || '4to Año'}`}
+        subtitle={schoolAndGrade || 'Alumno'}
         onAvatarClick={() => setIsEditModalOpen(true)}
       >
         <button
@@ -42,7 +47,9 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         tag="Estudiante PlayCode"
         tagIcon="verified"
         title={`${user.name} ${user.lastName}`}
-        description={`Alumno regular en ${user.school}. Ha alcanzado un ${user.generalProgress || 78}% de progreso general en la plataforma con una racha activa constante.`}
+        description={hasAssignedCourses
+          ? `Alumno regular${user.school ? ` en ${user.school}` : ''}. Ha alcanzado un ${user.generalProgress}% de progreso general en la plataforma con una racha activa constante.`
+          : `Alumno${user.school ? ` en ${user.school}` : ''}. Todavía no tiene cursos asignados.`}
         imageSrc={user.avatarUrl || MASCOT_IMAGES.roundAvatar}
         imageAlt={`Foto de ${user.name}`}
         imageVariant="avatar"
@@ -105,13 +112,13 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             </p>
           </div>
           <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full self-start sm:self-auto">
-            3 / 4 Desbloqueadas
+            {unlockedBadges} / {badges.length} Desbloqueadas
           </span>
         </div>
 
         {/* Circular Medallions Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 items-start justify-items-center">
-          {BADGES.map((badge) => (
+          {badges.map((badge) => (
             <div key={badge.id} className="flex flex-col items-center text-center gap-2.5 group">
               {/* Circular Medallion */}
               <div
@@ -148,7 +155,18 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         </div>
       </section>
 
-      {/* Mis Cursos & Activity Overview */}
+      {/* Mis Cursos & Activity Overview (only once a course has been assigned) */}
+      {!hasAssignedCourses ? (
+        <section className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-6 flex flex-col items-center justify-center text-center min-h-[140px]">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-2">
+            <span className="material-symbols-outlined text-2xl">menu_book</span>
+          </div>
+          <h3 className="font-heading font-bold text-base text-[#0b1c30]">No tenés cursos asignados todavía</h3>
+          <p className="text-xs text-[#737686] mt-1">
+            Cuando un administrador te asigne un curso, vas a poder comenzar a aprender.
+          </p>
+        </section>
+      ) : (
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Active Course Card */}
         <div 
@@ -201,6 +219,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
           </p>
         </div>
       </section>
+      )}
 
       {/* Edit Profile Modal */}
       <EditProfileModal

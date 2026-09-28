@@ -1,18 +1,34 @@
 ﻿import React, { useState } from 'react';
 import { ScreenView, Course } from '../types';
-import { COURSES_DATA } from '../data/mockData';
 import { StatusHud } from './ui/StatusHud';
 
 interface CourseMapViewProps {
+  // Demo mode passes COURSES_DATA from mockData; real users pass their assigned courses.
+  courses: Course[];
   onNavigate: (view: ScreenView) => void;
   onSelectCourse?: (course: Course) => void;
+  // Where the "back" button goes (the home view of the current role).
+  backView?: ScreenView;
+  // 'teacher': the real teacher's courses ("Ver curso" instead of "Continuar"/"Empezar").
+  mode?: 'student' | 'teacher';
+  // Teacher mode: opens a course. There is no course detail view yet, so the
+  // button stays disabled until this is provided.
+  onViewCourse?: (course: Course) => void;
 }
 
-export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSelectCourse }) => {
+export const CourseMapView: React.FC<CourseMapViewProps> = ({
+  courses,
+  onNavigate,
+  onSelectCourse,
+  backView = 'dashboard',
+  mode = 'student',
+  onViewCourse,
+}) => {
+  const isTeacher = mode === 'teacher';
   const [lockedMessage, setLockedMessage] = useState<{ courseId: string; text: string } | null>(null);
   const [activeMessage, setActiveMessage] = useState<{ courseId: string; text: string } | null>(null);
 
-  const inProgressCourse = COURSES_DATA.find(c => c.status === 'in_progress');
+  const inProgressCourse = courses.find(c => c.status === 'in_progress');
 
   const getLanguageStripeColor = (course: Course) => {
     const text = `${course.title} ${course.tag} ${course.category}`.toLowerCase();
@@ -26,13 +42,18 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSele
 
   const getPrerequisiteName = (prerequisiteId?: string) => {
     if (!prerequisiteId) return '';
-    return COURSES_DATA.find(c => c.id === prerequisiteId)?.title ?? prerequisiteId;
+    return courses.find(c => c.id === prerequisiteId)?.title ?? prerequisiteId;
   };
 
   const handleCourseClick = (course: Course) => {
     // Dismiss all messages first
     setLockedMessage(null);
     setActiveMessage(null);
+
+    if (isTeacher) {
+      onViewCourse?.(course);
+      return;
+    }
 
     if (course.status === 'locked') {
       const prereqName = getPrerequisiteName(course.prerequisiteId);
@@ -124,24 +145,38 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSele
       {/* Top Status HUD */}
       <StatusHud
         avatarIcon="explore"
-        badgeText="Catálogo de Aprendizaje"
-        title="Mapa de Cursos"
-        subtitle="Explora las rutas de programación y continúa tu camino formativo"
+        badgeText={isTeacher ? 'Cursos a cargo' : 'Catálogo de Aprendizaje'}
+        title={isTeacher ? 'Mis Cursos' : 'Mapa de Cursos'}
+        subtitle={isTeacher
+          ? 'Tus cursos con sus unidades, actividades y alumnos'
+          : 'Explora las rutas de programación y continúa tu camino formativo'}
       >
         <button
-          onClick={() => onNavigate('dashboard')}
+          onClick={() => onNavigate(backView)}
           className="flex items-center gap-1.5 text-xs font-semibold text-blue-100 hover:text-white bg-white/10 hover:bg-white/15 px-3.5 py-2 rounded-xl transition-all border border-white/15 shadow-xs cursor-pointer"
         >
           <span className="material-symbols-outlined text-base">dashboard</span>
-          <span>Volver al Dashboard</span>
+          <span>{isTeacher ? 'Volver al Inicio' : 'Volver al Dashboard'}</span>
         </button>
       </StatusHud>
 
       {/* Courses Bento List */}
       <div className="grid grid-cols-1 gap-5">
-        {COURSES_DATA.map((course) => {
+        {courses.length === 0 && (
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-[0px_4px_16px_rgba(0,0,0,0.04)] p-10 flex flex-col items-center text-center gap-2">
+            <span className="material-symbols-outlined text-4xl text-slate-300">menu_book</span>
+            <p className="text-sm font-semibold text-slate-600">
+              {isTeacher ? 'No tenés cursos asignados todavía.' : 'Todavía no tenés cursos asignados.'}
+            </p>
+            <p className="text-xs text-slate-400">Cuando un administrador te asigne cursos, van a aparecer acá.</p>
+          </div>
+        )}
+        {courses.map((course) => {
           const stripeColor = getLanguageStripeColor(course);
-          const isLocked = course.status === 'locked';
+          // A teacher consults the courses assigned to them: nothing is locked and there
+          // is no personal progress (those states belong to the student's path).
+          const isLocked = !isTeacher && course.status === 'locked';
+          const activitiesCount = course.units.reduce((sum, u) => sum + u.exercises.length, 0);
           const showLockedMsg = lockedMessage?.courseId === course.id;
           const showActiveMsg = activeMessage?.courseId === course.id;
 
@@ -210,7 +245,13 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSele
                       >
                         {course.tag}
                       </span>
-                      {getBadge(course)}
+                      {isTeacher ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Asignado
+                        </span>
+                      ) : (
+                        getBadge(course)
+                      )}
                     </div>
 
                     <h2 className={`font-heading font-bold text-xl mb-1 ${isLocked ? 'text-slate-500' : 'text-[#0b1c30]'}`}>
@@ -220,8 +261,22 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSele
                       {course.description}
                     </p>
 
-                    {/* Progress Bar */}
-                    {!isLocked && (
+                    {/* Teacher: course content summary */}
+                    {isTeacher && (
+                      <p className="mt-3 text-xs font-semibold text-[#737686] flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>menu_book</span>
+                          {course.units.length} {course.units.length === 1 ? 'unidad' : 'unidades'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>assignment</span>
+                          {activitiesCount} {activitiesCount === 1 ? 'actividad' : 'actividades'}
+                        </span>
+                      </p>
+                    )}
+
+                    {/* Progress Bar (student) */}
+                    {!isLocked && !isTeacher && (
                       <div className="mt-3.5 flex items-center gap-3">
                         <div className="flex-grow bg-slate-100 rounded-full h-2.5 overflow-hidden">
                           <div
@@ -251,10 +306,15 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({ onNavigate, onSele
                       e.stopPropagation();
                       handleCourseClick(course);
                     }}
-                    disabled={isLocked}
-                    className={`px-5 py-2.5 rounded-xl font-semibold text-xs md:text-sm transition-all flex-shrink-0 shadow-xs relative z-20 ${getButtonClass(course)}`}
+                    disabled={isTeacher ? !onViewCourse : isLocked}
+                    title={isTeacher && !onViewCourse ? 'Disponible próximamente' : undefined}
+                    className={`px-5 py-2.5 rounded-xl font-semibold text-xs md:text-sm transition-all flex-shrink-0 shadow-xs relative z-20 ${
+                      isTeacher
+                        ? 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                        : getButtonClass(course)
+                    }`}
                   >
-                    {getButtonLabel(course)}
+                    {isTeacher ? 'Ver curso' : getButtonLabel(course)}
                   </button>
                 </div>
               </article>

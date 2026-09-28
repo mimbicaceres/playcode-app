@@ -1,20 +1,78 @@
 import React from 'react';
-import { ScreenView, Course, Unit } from '../types';
+import { ScreenView, Course, StudentProgressRecord, Unit } from '../types';
 import { COURSES_DATA, MASCOT_IMAGES } from '../data/mockData';
 import { StatusHud } from './ui/StatusHud';
 import { SegmentedProgressBar } from './ui/SegmentedProgressBar';
+import { CourseStudentList } from './CourseStudentList';
 
 interface CourseRoadmapViewProps {
   onNavigate: (view: ScreenView) => void;
   course: Course | null;
+  // 'teacher': the real teacher's course view (units of the course, without the
+  // student's "Continuar/Repasar" actions, locks or mascot, and never mock data).
+  mode?: 'student' | 'teacher';
+  // Teacher mode: figures of the selected course's students (not a student's own progress).
+  teacherSummary?: { studentsCount: number; averageProgress: number };
+  // Teacher mode: students of the selected course (teacherCourseId) and the
+  // "Ver progreso" action that opens their individual follow-up.
+  teacherStudents?: StudentProgressRecord[];
+  onViewStudentProgress?: (studentId: string) => void;
 }
 
-export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({ onNavigate, course: courseProp }) => {
+export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
+  onNavigate,
+  course: courseProp,
+  mode = 'student',
+  teacherSummary,
+  teacherStudents = [],
+  onViewStudentProgress,
+}) => {
+  const isTeacher = mode === 'teacher';
+
+  // Teacher mode never falls back to example data: it asks to choose a course.
+  if (isTeacher && !courseProp) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 flex flex-col gap-6">
+        <StatusHud avatarIcon="menu_book" badgeText="Curso a cargo" title="Curso" subtitle="Unidades y actividades del curso" />
+        <div className="flex flex-col items-center justify-center py-16 gap-3 bg-white rounded-3xl border border-[#e2e8f0] shadow-sm text-center px-6">
+          <span className="material-symbols-outlined text-5xl text-slate-300">menu_book</span>
+          <p className="text-base font-semibold text-slate-600">Elegí un curso para ver su contenido.</p>
+          <button
+            onClick={() => onNavigate('courses_map')}
+            className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-xl font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+          >
+            Ir a Cursos
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Fallback to first in_progress course if nothing was passed
   const course: Course = courseProp ?? COURSES_DATA.find(c => c.status === 'in_progress') ?? COURSES_DATA[0];
-  const isReviewMode = course.status === 'completed';
+  const isReviewMode = !isTeacher && course.status === 'completed';
 
   const renderUnit = (unit: Unit, index: number) => {
+    // Teacher: every unit is shown the same way (no student progress/locks).
+    if (isTeacher) {
+      return (
+        <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12">
+          <div className="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-md border-4 border-white z-10 mb-2 font-heading font-bold text-lg">
+            {unit.number}
+          </div>
+          <div className="soft-card rounded-2xl p-5 border-blue-100 w-full max-w-sm text-center shadow-xs">
+            <span className="text-[11px] font-bold text-[#2563eb] uppercase tracking-wider">{unit.title}</span>
+            <h3 className="font-heading font-bold text-lg text-[#0b1c30]">{unit.subtitle}</h3>
+            <p className="text-xs text-[#434655] mt-1">{unit.description}</p>
+            <p className="text-[11px] text-slate-500 mt-3 flex items-center justify-center gap-1">
+              <span className="material-symbols-outlined text-sm">assignment</span>
+              {unit.exercises.length} actividades
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     const effectiveStatus = isReviewMode ? 'active' : unit.status;
     const isCompleted = unit.status === 'completed';
     const isActive = effectiveStatus === 'active';
@@ -88,14 +146,17 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({ onNavigate
     );
   };
 
-  const completedSegments = Math.round((course.progressPercent / 100) * 20);
+  // Teacher: average progress of the course's students; student: their own progress.
+  const progressPercent = isTeacher ? teacherSummary?.averageProgress ?? 0 : course.progressPercent;
+  const completedSegments = Math.round((progressPercent / 100) * 20);
+  const activitiesCount = course.units.reduce((sum, u) => sum + u.exercises.length, 0);
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 flex flex-col gap-6">
       {/* Top Status HUD */}
       <StatusHud
         avatarIcon="terminal"
-        badgeText="Ruta de Aprendizaje"
+        badgeText={isTeacher ? 'Curso a cargo' : 'Ruta de Aprendizaje'}
         title={course.title}
         subtitle={`${course.subtitle} • ${course.category}`}
       >
@@ -121,10 +182,25 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({ onNavigate
         <SegmentedProgressBar
           totalSegments={20}
           completedSegments={completedSegments}
-          percentage={course.progressPercent}
-          label="Progreso general del curso"
+          percentage={progressPercent}
+          label={isTeacher ? 'Progreso promedio de los alumnos' : 'Progreso general del curso'}
         />
+        {isTeacher && (
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <p className="text-xs text-[#434655]">{course.description}</p>
+            <p className="text-xs font-semibold text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-blue-600">groups</span>{teacherSummary?.studentsCount ?? 0} {teacherSummary?.studentsCount === 1 ? 'alumno' : 'alumnos'}</span>
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-blue-600">menu_book</span>{course.units.length} unidades</span>
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm text-blue-600">assignment</span>{activitiesCount} actividades</span>
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Teacher: students of the selected course (same list as "Alumnos") */}
+      {isTeacher && onViewStudentProgress && (
+        <CourseStudentList courseName={course.title} students={teacherStudents} onViewProgress={onViewStudentProgress} />
+      )}
 
       {/* Learning Path Tree */}
       {course.units.length === 0 ? (
@@ -132,10 +208,12 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({ onNavigate
         <div className="flex flex-col items-center justify-center py-16 gap-4 bg-white rounded-3xl border border-[#e2e8f0] shadow-sm">
           <span className="material-symbols-outlined text-6xl text-slate-300">construction</span>
           <p className="text-base font-semibold text-slate-500 text-center max-w-xs">
-            Las unidades de este curso estarán disponibles pronto
+            {isTeacher ? 'Este curso todavía no tiene unidades.' : 'Las unidades de este curso estarán disponibles pronto'}
           </p>
           <p className="text-xs text-slate-400 text-center max-w-xs">
-            Estamos preparando el contenido para que puedas aprender de la mejor manera.
+            {isTeacher
+              ? 'Cuando se carguen unidades y actividades, vas a verlas acá.'
+              : 'Estamos preparando el contenido para que puedas aprender de la mejor manera.'}
           </p>
         </div>
       ) : (
@@ -144,7 +222,7 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({ onNavigate
           <div className="absolute left-1/2 -translate-x-1/2 top-12 bottom-20 w-1 border-r-2 border-dashed border-blue-300/70 z-0">
             <div
               className="w-full bg-[#2563eb] rounded-full transition-all duration-1000"
-              style={{ height: `${course.progressPercent}%` }}
+              style={{ height: `${progressPercent}%` }}
             />
           </div>
 

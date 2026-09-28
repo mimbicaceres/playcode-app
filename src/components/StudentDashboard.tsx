@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScreenView, UserProfile } from '../types';
+import { Course, ScreenView, UserProfile } from '../types';
 import { MASCOT_IMAGES } from '../data/mockData';
 import { StatusHud } from './ui/StatusHud';
 import { ColorBlockHero } from './ui/ColorBlockHero';
@@ -8,9 +8,14 @@ import { SegmentedProgressBar } from './ui/SegmentedProgressBar';
 interface StudentDashboardProps {
   user: UserProfile;
   onNavigate: (view: ScreenView) => void;
+  // Real students: their assigned courses (no progress yet). Without it (demo
+  // mode) the example content below is shown.
+  courses?: Course[];
+  onOpenCourse?: (course: Course) => void;
 }
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate }) => {
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate, courses, onOpenCourse }) => {
+  const firstCourse = courses?.[0];
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 md:py-8 pb-28 md:pb-12 flex flex-col gap-6">
       {/* Top Status HUD */}
@@ -61,6 +66,90 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         </div>
       </section>
 
+      {/* Real student: start the first assigned course */}
+      {firstCourse && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading font-bold text-xl text-[#0b1c30]">
+            Empezá a aprender
+          </h2>
+          <ColorBlockHero
+            tag={firstCourse.tag}
+            tagIcon={firstCourse.iconName}
+            title={firstCourse.title}
+            description={firstCourse.description}
+            imageSrc={MASCOT_IMAGES.thumbsUp}
+            imageAlt="Carpincho"
+            progressElement={
+              <SegmentedProgressBar
+                completedSegments={0}
+                totalSegments={Math.max(1, firstCourse.units.length)}
+                percentage={0}
+                label="Progreso del curso"
+              />
+            }
+            actions={
+              <button
+                onClick={() => onOpenCourse?.(firstCourse)}
+                className="btn-game-amber px-6 py-2.5 text-sm flex items-center gap-2"
+              >
+                <span>Ver curso</span>
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </button>
+            }
+          />
+        </section>
+      )}
+
+      {courses && (
+        <section className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <h2 className="font-heading font-bold text-xl text-[#0b1c30]">
+              Tus Cursos
+            </h2>
+            <button
+              onClick={() => onNavigate('courses_map')}
+              className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
+            >
+              Ver cursos <span className="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {courses.map((course) => (
+              <div
+                key={course.id}
+                onClick={() => onOpenCourse?.(course)}
+                className="bg-white p-4 rounded-2xl border border-[#e2e8f0] shadow-sm flex items-center gap-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 border"
+                  style={{ backgroundColor: `${course.color}1a`, borderColor: `${course.color}40`, color: course.color }}
+                >
+                  {course.logoUrl
+                    ? <img src={course.logoUrl} alt="" className="w-8 h-8 object-contain" />
+                    : <span className="material-symbols-outlined text-2xl">{course.iconName}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-base text-[#0b1c30] truncate group-hover:text-[#2563eb] transition-colors">
+                    {course.title}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#2563eb] rounded-full" style={{ width: `${course.progressPercent}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-[#2563eb]">{course.progressPercent}%</span>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-[#2563eb] group-hover:translate-x-0.5 transition-all">
+                  chevron_right
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Demo mode: example content */}
+      {!courses && (<>
       {/* Continue Learning Hero Block */}
       <section className="flex flex-col gap-3">
         <h2 className="font-heading font-bold text-xl text-[#0b1c30]">
@@ -168,6 +257,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
           </div>
         </div>
       </section>
+      </>)}
     </div>
   );
 };
