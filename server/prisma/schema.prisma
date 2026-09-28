@@ -25,6 +25,24 @@ model User {
   avatarUrl    String?
   streakDays   Int      @default(0)
   totalXp      Int      @default(0)
+  // Deactivated accounts cannot sign in (set by an admin).
+  isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  courseAssignments CourseAssignment[]
+}
+
+// Course of the CODIX catalog assigned by an admin to a student or a teacher.
+// Courses are predefined by CODIX (not stored here): courseId is the catalog id.
+model CourseAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
 }

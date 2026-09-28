@@ -3,37 +3,67 @@ import bcrypt from "bcrypt";
 import { UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
-// Development-only demo accounts, one per role. Public registration always
-// creates students, so this is the way to get teacher/admin users locally.
+// Development-only accounts. Public registration always creates students,
+// so the seed is the way to get teacher/admin users locally.
+// Idempotent: running it again updates these users instead of duplicating them.
+
+interface SeedUser {
+  email: string;
+  name: string;
+  lastName: string;
+  role: UserRole;
+  grade?: string;
+  school?: string;
+}
+
+// Demo accounts (one per role) with a well-known password.
 const DEMO_PASSWORD = "password123";
 
-const DEMO_USERS: { email: string; name: string; lastName: string; role: UserRole; grade?: string }[] = [
-  { email: "estudiante@ejemplo.com", name: "Facundo", lastName: "González", role: "student", grade: "4to Año" },
-  { email: "docente@ejemplo.com", name: "Santiago", lastName: "Ramos", role: "teacher" },
-  { email: "admin@ejemplo.com", name: "Admin", lastName: "CODIX", role: "admin" },
+const DEMO_USERS: SeedUser[] = [
+  { email: "estudiante@ejemplo.com", name: "Facundo", lastName: "González", role: "student", grade: "4to Año", school: "Colegio San Martín" },
+  { email: "docente@ejemplo.com", name: "Santiago", lastName: "Ramos", role: "teacher", school: "Colegio San Martín" },
+  { email: "admin@ejemplo.com", name: "Admin", lastName: "CODIX", role: "admin", school: "Colegio San Martín" },
 ];
+
+// Fixed test accounts (real, non-demo users). Their password is read from
+// SEED_TEST_PASSWORD in server/.env so it never ends up in the repository.
+const TEST_USERS: SeedUser[] = [
+  { email: "antoalumno@codix.com", name: "Anto", lastName: "Alumno", role: "student" },
+  { email: "antodocente@codix.com", name: "Anto", lastName: "Docente", role: "teacher" },
+  { email: "antoadmin@codix.com", name: "Anto", lastName: "Admin", role: "admin" },
+];
+
+async function upsertUsers(users: SeedUser[], password: string, syncPassword: boolean) {
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  for (const seedUser of users) {
+    const { email, ...profile } = seedUser;
+    await prisma.user.upsert({
+      where: { email },
+      update: syncPassword ? { ...profile, passwordHash } : { role: profile.role },
+      create: { email, ...profile, passwordHash },
+    });
+    console.log(`  ${seedUser.role.padEnd(7)} ${email}`);
+  }
+}
 
 async function main() {
   if (process.env.NODE_ENV === "production") {
-    throw new Error("Refusing to seed demo users in production");
+    throw new Error("Refusing to seed development users in production");
   }
 
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  console.log("Demo users:");
+  await upsertUsers(DEMO_USERS, DEMO_PASSWORD, false);
+  console.log(`  (password: ${DEMO_PASSWORD})`);
 
-  for (const demo of DEMO_USERS) {
-    await prisma.user.upsert({
-      where: { email: demo.email },
-      update: { role: demo.role },
-      create: {
-        ...demo,
-        passwordHash,
-        school: "Colegio San Martín",
-      },
-    });
-    console.log(`  ${demo.role.padEnd(7)} ${demo.email}`);
+  const testPassword = process.env.SEED_TEST_PASSWORD;
+  if (!testPassword) {
+    console.warn("SEED_TEST_PASSWORD is not set in server/.env: skipping fixed test users.");
+    return;
   }
 
-  console.log(`Demo users ready (password: ${DEMO_PASSWORD})`);
+  console.log("Fixed test users:");
+  await upsertUsers(TEST_USERS, testPassword, true);
 }
 
 main()
