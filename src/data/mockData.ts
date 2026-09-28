@@ -1,4 +1,4 @@
-import { Course, UserProfile, AchievementBadge, ActivityItem, ExerciseHistoryItem, InstitutionStats } from '../types';
+import { Course, UserProfile, AchievementBadge, ActivityItem, ExerciseHistoryItem, InstitutionStats, TeacherDashboardData, ReportsData, StudentAuditData, AdminDashboardData, StudentProgressRecord } from '../types';
 
 export const MASCOT_IMAGES = {
   mainHero: '/carpii.png',
@@ -37,7 +37,8 @@ export const currentUser: UserProfile = {
   avatarUrl: AVATAR_IMAGES.facuPhoto,
   streakDays: 12,
   totalXp: 2450,
-  generalProgress: 78
+  generalProgress: 78,
+  assignedCourseIds: ['prog1']
 };
 
 export const INITIAL_USER = currentUser;
@@ -380,5 +381,269 @@ export const RECENT_USERS_ADMIN = [
     initials: 'SG',
     colorBg: 'bg-amber-100 text-amber-700',
     currentCourse: 'Lógica Computacional'
+  }
+];
+
+// Example teacher dashboard (demo mode only). Same values the dashboard used to hardcode.
+export const DEMO_TEACHER_DASHBOARD: TeacherDashboardData = {
+  teacherName: 'Prof. Santiago Ramos',
+  subtitle: 'Colegio San Martín • Dpto. Ciencias de la Computación',
+  totalStudents: 142,
+  studentsTrend: '+12%',
+  activeGroups: 4,
+  averageProgress: 68,
+  submissionsToday: 34,
+  pendingFeedback: 2,
+  lastSubmission: 'hace 12 min',
+  courses: [
+    { id: 'c1', name: 'Introducción a HTML/CSS', students: 45, progress: 82, icon: 'html', category: 'Frontend', status: 'Activo' },
+    { id: 'c2', name: 'Lógica con JavaScript', students: 38, progress: 45, icon: 'javascript', category: 'Lógica', status: 'Activo' },
+    { id: 'c3', name: 'Estructuras de Datos', students: 59, progress: 60, icon: 'data_object', category: 'Algoritmos', status: 'Activo' },
+    { id: 'c4', name: 'Bases de Datos SQL', students: 24, progress: 15, icon: 'database', category: 'Backend', status: 'Pausado' }
+  ],
+  activities: RECENT_ACTIVITIES
+};
+
+// Example "Progreso" (reports) data (demo mode only). Same values the view used to hardcode.
+export const DEMO_REPORTS: ReportsData = {
+  averageStreakDays: 14.2,
+  exercisesSolved: 1342,
+  practiceTime: '128h 45m',
+  linesOfCode: 18405,
+  coursePerformance: [
+    { label: 'HTML/CSS', percent: 85, barClass: 'bg-blue-600 group-hover:bg-blue-700' },
+    { label: 'JavaScript', percent: 60, barClass: 'bg-emerald-500 group-hover:bg-emerald-600' },
+    { label: 'Python', percent: 40, barClass: 'bg-amber-500 group-hover:bg-amber-600' },
+    { label: 'React', percent: 25, barClass: 'bg-indigo-400 group-hover:bg-indigo-500' },
+    { label: 'SQL', percent: 15, barClass: 'bg-slate-400 group-hover:bg-slate-500' }
+  ],
+  totalErrors: 142,
+  errorBreakdown: [
+    { label: 'Syntax Error', percent: 35, color: '#ef4444', dotClass: 'bg-red-500' },
+    { label: 'Logic Error', percent: 30, color: '#f59e0b', dotClass: 'bg-amber-500' },
+    { label: 'Runtime Error', percent: 20, color: '#10b981', dotClass: 'bg-emerald-500' },
+    { label: 'Type / Formatting', percent: 15, color: '#6366f1', dotClass: 'bg-indigo-500' }
+  ],
+  xpTrend: { weeklyXp: [240, 190, 380, 310, 650] }
+};
+
+// Example student audit (demo mode only). Same values the view used to hardcode.
+export const DEMO_STUDENT_AUDIT: StudentAuditData = {
+  studentName: 'Facundo G.',
+  avatarUrl: AVATAR_IMAGES.facuPhoto,
+  subtitle: "Colegio San Martín • 4to Año 'A' • Registro Académico: #EST-8492",
+  overallProgress: 78,
+  exercisesSolved: 28,
+  exercisesTotal: 36,
+  platformTime: '14h 20m',
+  badges: BADGES,
+  totalXp: 2450,
+  weeklyXp: [
+    { xp: 120, percent: 25, barClass: 'bg-blue-200 hover:bg-blue-300' },
+    { xp: 250, percent: 40, barClass: 'bg-blue-300 hover:bg-blue-400' },
+    { xp: 210, percent: 35, barClass: 'bg-blue-300 hover:bg-blue-400' },
+    { xp: 450, percent: 65, barClass: 'bg-blue-400 hover:bg-blue-500' },
+    { xp: 620, percent: 88, barClass: 'bg-blue-600' }
+  ],
+  accuracy: 85,
+  accuracyLabel: 'Alta',
+  accuracyNote: '1 error registrado en 4 entregas',
+  history: EXERCISE_HISTORY
+};
+
+// Example admin panel (demo mode only). Same values the view used to hardcode.
+export const DEMO_ADMIN_DASHBOARD: AdminDashboardData = {
+  totalUsers: 1240,
+  usersTrend: '+18% mes',
+  coursesCount: 48,
+  coursesInEditing: 12,
+  sandboxUptime: '99.98%',
+  exercisesEvaluated: 18450,
+  evaluationLatency: '120ms avg',
+  users: [
+    { id: 'u1', name: 'Facundo Gómez', email: 'facu.gomez@escuela.edu.ar', role: 'student', school: 'Colegio San Martín', status: 'Activo', xp: 1250 },
+    { id: 'u2', name: 'Prof. Santiago Ramos', email: 'santiago.ramos@escuela.edu.ar', role: 'teacher', school: 'Colegio San Martín', status: 'Activo', xp: 9400 },
+    { id: 'u3', name: 'Ana Belén Martínez', email: 'ana.martinez@tecnica1.edu.ar', role: 'student', school: 'Escuela Técnica N°1', status: 'Activo', xp: 2180 },
+    { id: 'u4', name: 'Prof. Carla Véliz', email: 'carla.veliz@itba.edu.ar', role: 'teacher', school: 'Instituto Tecnológico', status: 'Activo', xp: 14200 },
+    { id: 'u5', name: 'Martín Bossi', email: 'm.bossi@sanmartin.edu.ar', role: 'student', school: 'Colegio San Martín', status: 'Pendiente', xp: 450 },
+    { id: 'u6', name: 'Admin Root PlayCode', email: 'admin@playcode.edu', role: 'admin', school: 'Ministerio de Educación', status: 'Activo', xp: 25000 }
+  ],
+  schools: [
+    { id: 's1', name: 'Colegio San Martín', province: 'Buenos Aires', studentsCount: 420, teachersCount: 14, plan: 'Plan Educativo Pro', status: 'Activo' },
+    { id: 's2', name: 'Escuela Técnica N°1 "Ing. Huergo"', province: 'Córdoba', studentsCount: 680, teachersCount: 22, plan: 'Plan Educativo Pro', status: 'Activo' },
+    { id: 's3', name: 'Instituto Tecnológico Belgrano', province: 'Santa Fe', studentsCount: 310, teachersCount: 9, plan: 'Estándar', status: 'Activo' },
+    { id: 's4', name: 'Colegio Nacional de La Plata', province: 'Buenos Aires', studentsCount: 540, teachersCount: 18, plan: 'Plan Educativo Pro', status: 'Activo' }
+  ],
+  xpMultiplier: 1.5,
+  baseXp: 15,
+  streakBonusXp: 50,
+  clusters: [
+    { name: 'cluster-runner-ar-01', status: '100% OK (12ms)', healthy: true },
+    { name: 'cluster-runner-ar-02', status: '100% OK (15ms)', healthy: true },
+    { name: 'cluster-evaluator-backup', status: 'Standby OK', healthy: false }
+  ],
+  clusterFooter: { scaling: 'Auto-scaling: Activo (AWS sa-east-1)', latency: 'Latencia avg: 13.5ms' },
+  logs: [
+    { text: '[SYSTEM] Core cluster init: 14 nodes ready.', muted: true },
+    { text: '[AUTH] JWT session verified for user u1 (Facundo Gómez).' },
+    { text: '[EXEC] Sandbox container runner-01 executed main.py in 18ms.' },
+    { text: '[EVAL] Test suite passed (4/4 assertions valid).' },
+    { text: '[REWARD] +20 XP dispatched to user u1.' },
+    { text: '[INFO] Database replica sync completed without lag.', muted: true },
+    { text: '[HEARTBEAT] All clusters operational at 100% health.' }
+  ]
+};
+
+// Example students for the "Progreso" view (demo mode only).
+export const DEMO_STUDENT_PROGRESS: StudentProgressRecord[] = [
+  {
+    id: 'sp_juan',
+    name: 'Juan Pérez',
+    avatarUrl: AVATAR_IMAGES.facuVector,
+    grade: '8° Año A',
+    school: 'Colegio San Martín',
+    courseName: 'Introducción a la Programación',
+    isActive: true,
+    lastActivity: 'Hoy 18:42',
+    streakDays: 4,
+    bestStreakDays: 9,
+    totalXp: 1240,
+    xpProgressPercent: 68,
+    badgesUnlocked: 5,
+    badgesTotal: 8,
+    overallProgress: 68,
+    exercisesSolved: 34,
+    exercisesTotal: 50,
+    accuracy: 82,
+    units: [
+      { label: 'Unidad 1 — Variables', percent: 100 },
+      { label: 'Unidad 2 — Condicionales', percent: 85 },
+      { label: 'Unidad 3 — Bucles', percent: 60 },
+      { label: 'Unidad 4 — Funciones', percent: 30 },
+      { label: 'Unidad 5 — Arrays', percent: 0 }
+    ],
+    correctAnswers: 34,
+    incorrectAnswers: 16,
+    practiceThisWeek: '3h 25m',
+    practiceDailyAverage: '29m',
+    practiceByDay: [
+      { day: 'Lun', minutes: 45 },
+      { day: 'Mar', minutes: 80 },
+      { day: 'Mié', minutes: 35 },
+      { day: 'Jue', minutes: 50 },
+      { day: 'Vie', minutes: 0 },
+      { day: 'Sáb', minutes: 40 },
+      { day: 'Dom', minutes: 55 }
+    ],
+    attentionAreas: [
+      { title: 'Bucles', detail: '6 ejercicios incorrectos en esta unidad', status: 'reinforce' },
+      { title: 'Funciones', detail: '4 ejercicios incorrectos', status: 'reinforce' },
+      { title: 'Arrays', detail: 'Aún no completó esta unidad', status: 'pending' }
+    ],
+    recentActivity: [
+      { when: 'Hoy 18:42', exercise: 'Ejercicio 12 — Bucles', correct: true },
+      { when: 'Hoy 17:20', exercise: 'Ejercicio 11 — Bucles', correct: false },
+      { when: 'Ayer 16:05', exercise: 'Ejercicio 10 — Funciones', correct: true },
+      { when: 'Ayer 14:30', exercise: 'Ejercicio 9 — Condicionales', correct: true },
+      { when: '23/09 18:12', exercise: 'Ejercicio 8 — Condicionales', correct: false }
+    ]
+  },
+  {
+    id: 'sp_ana',
+    name: 'Ana García',
+    avatarUrl: AVATAR_IMAGES.ana,
+    grade: '8° Año A',
+    school: 'Colegio San Martín',
+    courseName: 'Introducción a la Programación',
+    isActive: true,
+    lastActivity: 'Hoy 15:10',
+    streakDays: 12,
+    bestStreakDays: 12,
+    totalXp: 2180,
+    xpProgressPercent: 85,
+    badgesUnlocked: 7,
+    badgesTotal: 8,
+    overallProgress: 88,
+    exercisesSolved: 44,
+    exercisesTotal: 50,
+    accuracy: 91,
+    units: [
+      { label: 'Unidad 1 — Variables', percent: 100 },
+      { label: 'Unidad 2 — Condicionales', percent: 100 },
+      { label: 'Unidad 3 — Bucles', percent: 95 },
+      { label: 'Unidad 4 — Funciones', percent: 80 },
+      { label: 'Unidad 5 — Arrays', percent: 55 }
+    ],
+    correctAnswers: 44,
+    incorrectAnswers: 6,
+    practiceThisWeek: '5h 10m',
+    practiceDailyAverage: '44m',
+    practiceByDay: [
+      { day: 'Lun', minutes: 50 },
+      { day: 'Mar', minutes: 60 },
+      { day: 'Mié', minutes: 40 },
+      { day: 'Jue', minutes: 55 },
+      { day: 'Vie', minutes: 30 },
+      { day: 'Sáb', minutes: 35 },
+      { day: 'Dom', minutes: 40 }
+    ],
+    attentionAreas: [
+      { title: 'Arrays', detail: '2 ejercicios incorrectos en esta unidad', status: 'reinforce' }
+    ],
+    recentActivity: [
+      { when: 'Hoy 15:10', exercise: 'Ejercicio 22 — Arrays', correct: true },
+      { when: 'Hoy 14:45', exercise: 'Ejercicio 21 — Arrays', correct: false },
+      { when: 'Ayer 19:02', exercise: 'Ejercicio 20 — Funciones', correct: true },
+      { when: 'Ayer 18:30', exercise: 'Ejercicio 19 — Funciones', correct: true }
+    ]
+  },
+  {
+    id: 'sp_luis',
+    name: 'Luis Fernández',
+    avatarUrl: AVATAR_IMAGES.luis,
+    grade: '8° Año B',
+    school: 'Colegio San Martín',
+    courseName: 'Introducción a la Programación',
+    isActive: false,
+    lastActivity: '18/09 11:20',
+    streakDays: 0,
+    bestStreakDays: 3,
+    totalXp: 380,
+    xpProgressPercent: 19,
+    badgesUnlocked: 1,
+    badgesTotal: 8,
+    overallProgress: 22,
+    exercisesSolved: 11,
+    exercisesTotal: 50,
+    accuracy: 58,
+    units: [
+      { label: 'Unidad 1 — Variables', percent: 70 },
+      { label: 'Unidad 2 — Condicionales', percent: 20 },
+      { label: 'Unidad 3 — Bucles', percent: 0 },
+      { label: 'Unidad 4 — Funciones', percent: 0 },
+      { label: 'Unidad 5 — Arrays', percent: 0 }
+    ],
+    correctAnswers: 11,
+    incorrectAnswers: 8,
+    practiceThisWeek: '0m',
+    practiceDailyAverage: '0m',
+    practiceByDay: [
+      { day: 'Lun', minutes: 0 },
+      { day: 'Mar', minutes: 0 },
+      { day: 'Mié', minutes: 0 },
+      { day: 'Jue', minutes: 0 },
+      { day: 'Vie', minutes: 0 },
+      { day: 'Sáb', minutes: 0 },
+      { day: 'Dom', minutes: 0 }
+    ],
+    attentionAreas: [
+      { title: 'Condicionales', detail: '5 ejercicios incorrectos en esta unidad', status: 'reinforce' },
+      { title: 'Bucles', detail: 'Aún no comenzó esta unidad', status: 'pending' }
+    ],
+    recentActivity: [
+      { when: '18/09 11:20', exercise: 'Ejercicio 5 — Condicionales', correct: false },
+      { when: '18/09 10:55', exercise: 'Ejercicio 4 — Condicionales', correct: true },
+      { when: '17/09 16:40', exercise: 'Ejercicio 3 — Variables', correct: true }
+    ]
   }
 ];
