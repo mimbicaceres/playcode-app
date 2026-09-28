@@ -1,19 +1,63 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ScreenView, UserProfile } from '../types';
-import { canAccessView, getHomeView } from '../auth/access';
+import { canAccessView, canUseDemo, getHomeView } from '../auth/access';
+import { DemoPerspective } from '../routes';
 
 interface NavigationProps {
   currentView: ScreenView;
   onNavigate: (view: ScreenView) => void;
   user: UserProfile;
+  isDemo: boolean;
+  // Demo only: the panel currently shown (chosen from the hamburger menu).
+  demoPerspective?: DemoPerspective;
+  // Real teacher: whether a course is selected ("Ver curso"). "Alumnos" and
+  // "Progreso" depend on that course, so they only appear when there is one.
+  teacherCourseSelected?: boolean;
+  onOpenDemo: () => void;
+  onExitDemo: () => void;
   onLogout: () => void;
 }
+
+const ROLE_LABELS = { teacher: 'Docente', admin: 'Administrador' };
+
+// Demo navbar per panel: it adapts to the perspective chosen in the demo,
+// so the options of different roles are never mixed.
+const DEMO_NAV_ITEMS: Record<DemoPerspective, { id: ScreenView; label: string }[]> = {
+  admin: [
+    { id: 'admin_dashboard', label: 'Inicio' },
+    { id: 'student_progress', label: 'Progreso' },
+    { id: 'reports', label: 'Reporte' },
+  ],
+  teacher: [
+    { id: 'teacher_dashboard', label: 'Inicio' },
+    { id: 'courses_map', label: 'Cursos' },
+    { id: 'teacher_student_detail', label: 'Alumnos' },
+    { id: 'student_progress', label: 'Progreso' },
+    { id: 'reports', label: 'Reporte' },
+  ],
+  student: [
+    { id: 'dashboard', label: 'Inicio' },
+    { id: 'courses_map', label: 'Cursos' },
+    { id: 'profile', label: 'Perfil' },
+  ],
+};
+
+const DEMO_PANEL_BY_PERSPECTIVE: Record<DemoPerspective, ScreenView> = {
+  admin: 'admin_dashboard',
+  teacher: 'teacher_dashboard',
+  student: 'dashboard',
+};
 
 export const Navigation: React.FC<NavigationProps> = ({ 
   currentView, 
   onNavigate, 
-  user, 
-  onLogout 
+  user,
+  isDemo,
+  demoPerspective = 'admin',
+  teacherCourseSelected = false,
+  onOpenDemo,
+  onExitDemo,
+  onLogout
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -29,21 +73,34 @@ export const Navigation: React.FC<NavigationProps> = ({
   }, []);
 
   // The role comes from the authenticated session; the UI never changes it.
-  // Only views this role may open are offered (the router guard enforces it too).
+  // Only views this role may open in the current mode (real or demo) are offered;
+  // the router guard enforces the same rules.
+  // Teachers navigate only with this bar: Inicio | Cursos | Reporte, plus
+  // Alumnos | Progreso once a course is selected.
   const homeView = getHomeView(user.role);
+  const canOpen = (view: ScreenView) => canAccessView(view, user.role, isDemo);
 
-  const navItems = [
+  // Teacher panel (real or demo): "Alumnos" and "Progreso" need a selected course.
+  const needsCourse = (id: ScreenView) => id === 'teacher_student_detail' || id === 'student_progress';
+  const demoItems = DEMO_NAV_ITEMS[demoPerspective].filter(
+    (item) => demoPerspective !== 'teacher' || teacherCourseSelected || !needsCourse(item.id)
+  );
+
+  const navItems = (isDemo ? demoItems : [
     { id: homeView, label: 'Inicio' },
     { id: 'courses_map' as ScreenView, label: 'Cursos' },
-    { id: 'reports' as ScreenView, label: 'Progreso' },
+    ...(user.role === 'teacher' && teacherCourseSelected ? [{ id: 'teacher_student_detail' as ScreenView, label: 'Alumnos' }] : []),
+    ...(user.role !== 'teacher' || teacherCourseSelected ? [{ id: 'student_progress' as ScreenView, label: 'Progreso' }] : []),
+    // Students can open /alumno/progreso (their own report), but it is intentionally not in their navbar.
+    ...(user.role !== 'student' ? [{ id: 'reports' as ScreenView, label: 'Reporte' }] : []),
     { id: 'profile' as ScreenView, label: 'Perfil' },
-  ].filter((item) => canAccessView(item.id, user.role));
+  ]).filter((item) => canOpen(item.id));
 
   const panelItems = [
     { id: 'dashboard' as ScreenView, label: 'Panel Alumno', icon: '🎓' },
     { id: 'teacher_dashboard' as ScreenView, label: 'Panel Docente', icon: '👨‍🏫' },
     { id: 'admin_dashboard' as ScreenView, label: 'Admin Institucional', icon: '⚙️' },
-  ].filter((panel) => canAccessView(panel.id, user.role));
+  ].filter((panel) => canOpen(panel.id));
 
   return (
     <header className="bg-[#0a1c30] text-white sticky top-0 z-50 shadow-md">
@@ -69,7 +126,9 @@ export const Navigation: React.FC<NavigationProps> = ({
                   Cambiar Panel
                 </div>
                 {panelItems.map((panel) => {
-                  const isActive = currentView === panel.id;
+                  const isActive = isDemo
+                    ? DEMO_PANEL_BY_PERSPECTIVE[demoPerspective] === panel.id
+                    : currentView === panel.id;
                   return (
                     <button
                       key={panel.id}
@@ -94,7 +153,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           )}
 
           <div 
-            onClick={() => onNavigate(homeView)}
+            onClick={() => onNavigate(isDemo ? DEMO_PANEL_BY_PERSPECTIVE[demoPerspective] : homeView)}
             className="flex items-center gap-2 cursor-pointer"
           >
             <span className="font-heading font-bold text-xl tracking-wide text-blue-400">PlayCode</span>
@@ -123,18 +182,28 @@ export const Navigation: React.FC<NavigationProps> = ({
 
         {/* Derecha: Perfil de usuario dinámico + cerrar sesión */}
         <div className="flex items-center gap-3">
-        <div 
-          onClick={() => onNavigate('profile')}
-          className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+        {canUseDemo(user.role) && (
+          <button
+            onClick={isDemo ? onExitDemo : onOpenDemo}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300/40 text-amber-200 hover:bg-amber-400/15 hover:text-amber-100 transition-colors cursor-pointer"
+            title={isDemo ? 'Volver a los datos reales' : 'Ver las pantallas con datos de ejemplo'}
+          >
+            <span className="material-symbols-outlined text-base">slideshow</span>
+            {isDemo ? 'Salir de demo' : 'Demo'}
+          </button>
+        )}
+        <div
+          onClick={() => canOpen('profile') && onNavigate('profile')}
+          className={`flex items-center gap-3 transition-opacity ${canOpen('profile') ? 'cursor-pointer hover:opacity-90' : ''}`}
         >
           <img 
-            src={user.avatarUrl || "https://api.dicebear.com/8.x/notionists/svg?seed=Facundo"} 
+            src={user.avatarUrl || `https://api.dicebear.com/8.x/notionists/svg?seed=${encodeURIComponent(user.name)}`} 
             alt="Avatar" 
             className="w-8 h-8 rounded-full border border-white/20 bg-slate-800 object-cover"
           />
           <div className="text-xs">
             <div className="font-semibold">{user.name}</div>
-            <div className="text-blue-300 capitalize">{user.role === 'student' ? (user.grade || '4to Año') : user.role}</div>
+            <div className="text-blue-300 capitalize">{user.role === 'student' ? (user.grade || 'Alumno') : ROLE_LABELS[user.role]}</div>
           </div>
         </div>
         <button

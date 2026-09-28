@@ -1,35 +1,58 @@
 import { ScreenView, UserRole } from '../types';
 
-// Which roles may open each view. 'public' views need no session.
-// Teachers keep access to the content views their panel already links to
-// (cursos, unidad, progreso, perfil); admins may open every perspective.
-const STUDENT_HOME: UserRole[] = ['student', 'admin'];
-const LEARNING_CONTENT: UserRole[] = ['student', 'teacher', 'admin'];
-const TEACHER_AREA: UserRole[] = ['teacher', 'admin'];
-const ADMIN_AREA: UserRole[] = ['admin'];
+type Access = UserRole[] | 'public';
 
-const VIEW_ACCESS: Record<ScreenView, UserRole[] | 'public'> = {
+// Real mode (normal URLs): each role only sees its own area, fed with real data
+// (zeros/empty until an administrator assigns courses or students).
+const REAL_ACCESS: Record<ScreenView, Access> = {
   welcome: 'public',
   login: 'public',
   register: 'public',
-  dashboard: STUDENT_HOME,
-  courses_map: LEARNING_CONTENT,
-  course_roadmap: LEARNING_CONTENT,
-  unit_detail: LEARNING_CONTENT,
-  exercise: LEARNING_CONTENT,
-  reports: LEARNING_CONTENT,
-  profile: LEARNING_CONTENT,
-  teacher_dashboard: TEACHER_AREA,
-  teacher_student_detail: TEACHER_AREA,
-  admin_dashboard: ADMIN_AREA,
+  dashboard: ['student'],
+  courses_map: ['student', 'teacher'],
+  // Course view: the student's learning path, or the teacher's course ("Ver curso").
+  course_roadmap: ['student', 'teacher'],
+  unit_detail: ['student'],
+  exercise: ['student'],
+  profile: ['student'],
+  // Admin: general report; teacher: report per course; student: own progress (not in navbar).
+  reports: ['student', 'teacher', 'admin'],
+  teacher_dashboard: ['teacher'],
+  teacher_student_detail: ['teacher'],
+  // "Progreso": individual follow-up of each student (teacher and admin).
+  student_progress: ['teacher', 'admin'],
+  admin_dashboard: ['admin'],
 };
 
-export function isPublicView(view: ScreenView): boolean {
-  return VIEW_ACCESS[view] === 'public';
+// Demo mode (/demo/...): the existing screens with mockData, for presentations.
+// Exclusive to administrators, who may open every perspective.
+const DEMO_ACCESS: Record<ScreenView, Access> = {
+  welcome: 'public',
+  login: 'public',
+  register: 'public',
+  dashboard: ['admin'],
+  courses_map: ['admin'],
+  course_roadmap: ['admin'],
+  unit_detail: ['admin'],
+  exercise: ['admin'],
+  profile: ['admin'],
+  reports: ['admin'],
+  teacher_dashboard: ['admin'],
+  teacher_student_detail: ['admin'],
+  student_progress: ['admin'],
+  admin_dashboard: ['admin'],
+};
+
+export function canUseDemo(role: UserRole): boolean {
+  return role === 'admin';
 }
 
-export function canAccessView(view: ScreenView, role: UserRole): boolean {
-  const access = VIEW_ACCESS[view];
+export function isPublicView(view: ScreenView): boolean {
+  return REAL_ACCESS[view] === 'public';
+}
+
+export function canAccessView(view: ScreenView, role: UserRole, demo = false): boolean {
+  const access = (demo ? DEMO_ACCESS : REAL_ACCESS)[view];
   return access === 'public' || access.includes(role);
 }
 
