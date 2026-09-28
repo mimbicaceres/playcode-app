@@ -144,3 +144,32 @@
 .animate-peek {
   animation: peek-tilt 3.5s ease-in-out infinite;
 }
+
+/* Compact desktop layout: at 100% browser zoom the whole UI is rendered at 85%
+   (text, spacing, icons and fixed px sizes alike), so screens fit like they did
+   at ~85% zoom. Page containers keep their on-screen width (their max-width is
+   divided by the same factor), so the content still spans the screen.
+   Mobile/tablet (< 1024px) keeps its original size. */
+@media (min-width: 1024px) {
+  :root {
+    --app-zoom: 0.85;
+    --container-3xl: calc(48rem / var(--app-zoom));
+    --container-4xl: calc(56rem / var(--app-zoom));
+    --container-5xl: calc(64rem / var(--app-zoom));
+    --container-6xl: calc(72rem / var(--app-zoom));
+    --container-7xl: calc(80rem / var(--app-zoom));
+  }
+
+  html {
+    zoom: var(--app-zoom);
+  }
+
+  /* zoom also scales vh: keep full-height screens (login, register...) full height. */
+  .min-h-screen {
+    min-height: calc(100vh / var(--app-zoom));
+  }
+
+  .max-w-\[1600px\] {
+    max-width: calc(1600px / var(--app-zoom));
+  }
+}

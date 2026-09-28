@@ -1,12 +1,76 @@
 ﻿import React, { useState } from 'react';
 import { ScreenView } from '../types';
-import { MASCOT_IMAGES } from '../data/mockData';
 
 interface LoginViewProps {
   onNavigate: (view: ScreenView) => void;
   // Resolves to an error message to display, or null on success (App redirects by role).
   onLogin: (email: string, password: string) => Promise<string | null>;
 }
+
+const LOGIN_MASCOT = '/login-mascot.png';
+
+// Welcome scene of the login: the mascot typing on a laptop, with a plant,
+// books and floating code/chart cards around it, positioned in percentages so
+// it scales with the column width.
+const LoginIllustration: React.FC = () => (
+  <div className="relative w-full max-w-[620px] aspect-[44/34] translate-y-[12%]" aria-hidden="true">
+    {/* Floating code card */}
+    <div className="absolute left-[9%] top-[7%] w-[31%] h-[24%] rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm shadow-[0_8px_30px_rgba(15,23,42,0.35)] p-[3%] flex flex-col justify-center gap-[9%]">
+      {[
+        ['w-[45%]', 'bg-sky-400'],
+        ['w-[65%]', 'bg-pink-300'],
+        ['w-[55%]', 'bg-sky-300'],
+        ['w-[75%]', 'bg-violet-300'],
+      ].map(([width, color], i) => (
+        <div key={i} className="flex items-center gap-[6%]">
+          <span className="w-1.5 h-1.5 rounded-full bg-white/40 shrink-0" />
+          <span className={`h-2 rounded-full ${width} ${color}`} />
+        </div>
+      ))}
+    </div>
+
+    {/* Dotted grid */}
+    <div className="absolute right-[6%] top-[5%] grid grid-cols-4 gap-3 opacity-40">
+      {Array.from({ length: 12 }, (_, i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-blue-100" />)}
+    </div>
+
+    {/* Floating chart card */}
+    <div className="absolute right-[2%] top-[44%] w-[17%] aspect-square rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm shadow-[0_8px_30px_rgba(15,23,42,0.35)] flex items-center justify-center">
+      <svg className="w-[46%]" viewBox="0 0 40 40" fill="#38bdf8">
+        <rect x="2" y="24" width="8" height="14" rx="2" />
+        <rect x="16" y="15" width="8" height="23" rx="2" />
+        <rect x="30" y="4" width="8" height="34" rx="2" />
+      </svg>
+    </div>
+
+    {/* Sparkles next to the mascot's cap */}
+    <svg className="absolute left-[76%] top-[14%] w-[6%]" viewBox="0 0 30 30" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round">
+      <path d="M4 12 L9 4" />
+      <path d="M14 18 L24 14" />
+    </svg>
+
+    {/* Books and plant (behind the laptop's left corner) */}
+    <svg className="absolute left-[3%] top-[38%] w-[22%]" viewBox="0 0 100 110">
+      {/* Leaves */}
+      <path d="M50 48 C30 40 18 22 22 6 C38 12 50 28 50 48 Z" fill="#22c55e" stroke="#14532d" strokeWidth="2" />
+      <path d="M52 48 C60 26 76 14 92 14 C88 32 72 46 52 48 Z" fill="#4ade80" stroke="#14532d" strokeWidth="2" />
+      <path d="M50 48 C46 34 48 24 56 12" stroke="#14532d" strokeWidth="2" fill="none" />
+      {/* Pot */}
+      <path d="M30 46 H72 L68 70 Q67 74 62 74 H40 Q35 74 34 70 Z" fill="#f1f5f9" stroke="#1e2a55" strokeWidth="2.5" />
+      {/* Books */}
+      <rect x="8" y="74" width="86" height="15" rx="4" fill="#3b82f6" stroke="#1e2a55" strokeWidth="2.5" />
+      <rect x="14" y="89" width="80" height="15" rx="4" fill="#1d4ed8" stroke="#1e2a55" strokeWidth="2.5" />
+      <path d="M14 81 H86 M20 96 H88" stroke="#bfdbfe" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+
+    {/* Mascot typing on its laptop */}
+    <img
+      src={LOGIN_MASCOT}
+      alt=""
+      className="absolute left-[17%] top-[2%] w-[70%] drop-shadow-[0_14px_28px_rgba(15,23,42,0.5)]"
+    />
+  </div>
+);
 
 export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => {
   const [email, setEmail] = useState('estudiante@ejemplo.com');
@@ -35,14 +99,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => 
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
-      {/* Left Column - Gradient with mascot */}
-      <div className="flex flex-col items-center justify-end bg-gradient-to-b from-[#2563eb] to-[#0b1c30] text-white md:w-1/2 p-6 md:p-12">
-        <img
-          src={MASCOT_IMAGES.mainHero}
-          alt="Carpincho Mascota"
-          className="w-48 h-48 md:w-64 md:h-64 object-contain mb-4"
-        />
-        <p className="font-heading text-xl text-center">Bienvenido de vuelta!</p>
+      {/* Left Column - Gradient with the mascot working on its laptop */}
+      <div className="relative overflow-hidden flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#1d4ed8] via-[#1e3a8a] to-[#0b1c30] text-white md:w-1/2 px-6 py-8 md:px-10 md:py-8">
+        {/* Background glow */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-blue-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[640px] h-[220px] rounded-[100%] bg-blue-500/10 blur-2xl" />
+
+        <div className="relative translate-y-8 flex flex-col items-center gap-1">
+          <span className="font-heading font-bold text-3xl text-white tracking-tight">PlayCode</span>
+          <p className="text-sm font-medium tracking-wide text-blue-100/80">Gestioná · Aprendé · Crecé</p>
+        </div>
+
+        <LoginIllustration />
+
+        <div className="relative -mt-10 flex flex-col items-center gap-2 text-center">
+          <h1 className="font-heading font-bold text-3xl md:text-4xl leading-tight">
+            ¡Bienvenido <span className="text-sky-400">de vuelta</span>!
+          </h1>
+          <p className="text-sm md:text-base text-blue-100/85">Seguimos construyendo tu aprendizaje juntos</p>
+          <span className="mt-2 w-10 h-1 rounded-full bg-sky-400/80" />
+        </div>
       </div>
       {/* Right Column - Form Card */}
       <div className="flex flex-1 flex-col items-center justify-center bg-[#f8f9ff] p-6">
