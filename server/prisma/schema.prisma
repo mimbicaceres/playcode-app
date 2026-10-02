@@ -31,6 +31,8 @@ model User {
   updatedAt    DateTime @updatedAt
 
   courseAssignments CourseAssignment[]
+  // New relation for exercise progress
+  exerciseProgresses ExerciseProgress[]
 }
 
 // Course of the CODIX catalog assigned by an admin to a student or a teacher.
@@ -45,4 +47,35 @@ model CourseAssignment {
 
   @@unique([userId, courseId])
   @@index([courseId])
+}
+
+// ----------------------------------------------------
+// PROGRESO DE EJERCICIOS (solo datos que se guardan)
+// ----------------------------------------------------
+model ExerciseProgress {
+  id          String   @id @default(cuid())
+
+  // Relación al usuario que realiza el ejercicio – mismo tipo que User.id (String)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  // Identificador del ejercicio tal como está en el catálogo (src/data/codixCatalog.ts)
+  exerciseId  String
+
+  // Opcionales – se guardan para facilitar consultas y filtros
+  unitId      String?   // p.e. "unit-3"
+  courseId    String?   // p.e. "prog1"
+
+  // Estadísticas
+  attempts    Int       @default(0)      // cuántas veces se intentó
+  completed   Boolean   @default(false)  // true la primera vez que se pasa
+  xpEarned    Int       @default(0)      // XP ganado en esa primera pasada
+
+  // Tiempos
+  lastAttempt DateTime?                 // último intento (independiente de éxito)
+  completedAt DateTime?                 // when the exercise was first completed
+
+  // Índices y unicidad
+  @@unique([userId, exerciseId])               // un solo registro por usuario‑ejercicio
+  @@index([courseId, unitId])                  // búsquedas por curso / unidad
 }

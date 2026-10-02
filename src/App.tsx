@@ -55,6 +55,7 @@ export default function App() {
   const [demoUser, setDemoUser] = useState<UserProfile>(INITIAL_USER);
   // False while an existing token is being validated against /api/users/me.
   const [authChecked, setAuthChecked] = useState(() => !getStoredToken());
+const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ex1');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   // Real teacher context: the course selected with "Ver curso" (Alumnos, Progreso
@@ -82,8 +83,13 @@ export default function App() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
+    // Fetch user profile then their assigned courses
     fetchMe(token)
-      .then(({ user: apiUser }) => setUser(toUserProfile(apiUser)))
+      .then(({ user: apiUser }) => {
+        setUser(toUserProfile(apiUser));
+        return fetchMyCourses(token);
+      })
+      .then(({ courseIds }) => setMyCourseIds(courseIds))
       .catch(() => clearToken())
       .finally(() => setAuthChecked(true));
   }, []);

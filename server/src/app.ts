@@ -2,6 +2,8 @@ import cors from "cors";
 import express, { Express, NextFunction, Request, Response } from "express";
 import authRoutes from "./modules/auth/auth.routes";
 import usersRoutes from "./modules/users/users.routes";
+import coursesRoutes from "./modules/courses/courses.routes";
+import exercisesRoutes from "./modules/exercises/exercises.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -21,6 +23,8 @@ export function createApp(): Express {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/users", usersRoutes);
+app.use("/api/users/me", coursesRoutes);
+  app.use("/api/exercises", exercisesRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Ruta no encontrada" });

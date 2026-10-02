@@ -73,6 +73,13 @@ export function fetchMe(token: string) {
   });
 }
 
+export function fetchMyCourses(token: string) {
+  return request<{ courseIds: string[] }>('/users/me/courses', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+
 // Admin only (GET /api/users).
 export function fetchUsers(token: string) {
   return request<{ users: ApiUser[] }>('/users', {
