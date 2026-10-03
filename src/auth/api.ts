@@ -164,3 +164,21 @@ export function toUserProfile(user: ApiUser): UserProfile {
     assignedCourseIds: user.courseIds ?? [],
   };
 }
+
+// Submit exercise result to backend
+export async function submitExercise(
+  token: string,
+  exerciseId: string,
+  code: string,
+  success: boolean
+): Promise<{ success: boolean; xpEarned: number; attempts: number; completed: boolean }> {
+  return request<{ success: boolean; xpEarned: number; attempts: number; completed: boolean }>(
+    `/exercises/${exerciseId}/submit`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ code, success })
+    }
+  );
+}
+

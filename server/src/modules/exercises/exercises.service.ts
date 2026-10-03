@@ -1,9 +1,10 @@
 import { prisma } from '../../lib/prisma';
 import { Request, Response } from 'express';
 import { CODIX_CATALOG } from '../../lib/codixCatalog';
+import { Exercise } from '../../types';
 
 /** Helper to locate an exercise definition in the catalog */
-function findExerciseById(exerciseId: string) {
+function findExerciseById(exerciseId: string): Exercise | null {
   for (const course of CODIX_CATALOG) {
     for (const unit of course.units) {
       const ex = unit.exercises.find((e) => e.id === exerciseId);

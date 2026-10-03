@@ -4,7 +4,7 @@ import { ScreenView, UserProfile, Course, TeacherCourseRecord } from './types';
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, RegisterData, TeachingCourse, clearToken, fetchMe, fetchTeaching, getStoredToken, loginRequest, registerRequest,
+  ApiError, RegisterData, TeachingCourse, clearToken, fetchMe, fetchMyCourses, fetchTeaching, getStoredToken, loginRequest, registerRequest,
   storeToken, toUserProfile,
 } from './auth/api';
 import { BADGES, COURSES_DATA, DEMO_REPORTS, INITIAL_USER, MASCOT_IMAGES } from './data/mockData';
@@ -114,6 +114,19 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
       ...prev,
       totalXp: prev.totalXp + amount
     }));
+  };
+
+  // Refresh user data after completing an exercise to sync XP, attempts, streak, etc.
+  const handleExerciseCompleted = async () => {
+    const token = getStoredToken();
+    if (!token) return;
+    try {
+      const { user: apiUser } = await fetchMe(token);
+      // Update global user state with fresh data from backend
+      setUser(toUserProfile(apiUser));
+    } catch (err) {
+      console.error('Failed to refresh user after exercise:', err);
+    }
   };
 
   const handleUpdateProfile = (updatedData: Partial<UserProfile>) => {
@@ -365,6 +378,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
             onNavigate={setCurrentView}
             onAddXp={handleAddXp}
             currentExerciseId={selectedExerciseId}
+            onExerciseCompleted={handleExerciseCompleted}
           />
         )}
 

@@ -1,4 +1,4 @@
-import { Course } from '../types';
+import { Course, Unit, Exercise } from '../types';
 import { COURSES_DATA } from './mockData';
 
 // CODIX course catalog for real accounts: the predefined courses (content
@@ -10,11 +10,11 @@ export const CODIX_CATALOG: Course[] = COURSES_DATA.map((course) => ({
   completedLessons: 0,
   // Assigned by an administrator, so it is never locked for the user.
   status: 'available',
-  units: course.units.map((unit, unitIndex) => ({
+  units: course.units.map((unit: Unit, unitIndex: number) => ({
     ...unit,
     progressPercent: 0,
     status: unitIndex === 0 ? 'active' : 'locked',
-    exercises: unit.exercises.map((exercise) => ({ ...exercise, status: 'locked' })),
+    exercises: unit.exercises.map((exercise: Exercise) => ({ ...exercise, status: 'locked' })),
   })),
 }));
 

@@ -4,16 +4,20 @@ import { COURSES_DATA, MASCOT_IMAGES } from '../data/mockData';
 import { ErrorFeedbackModal } from './Modals/ErrorFeedbackModal';
 import { SuccessFeedbackModal } from './Modals/SuccessFeedbackModal';
 import { HintModal } from './Modals/HintModal';
+import { submitExercise, getStoredToken } from '../auth/api';
 
 interface ExerciseCodingViewProps {
   onNavigate: (view: ScreenView) => void;
   onAddXp?: (xp: number) => void;
   currentExerciseId?: string;
+  onExerciseCompleted?: () => void;
+
 }
 
 export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
   onNavigate,
   onAddXp,
+  onExerciseCompleted,
   currentExerciseId = 'ex1'
 }) => {
   // Find current exercise or default to Ex 1
@@ -30,6 +34,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showHintModal, setShowHintModal] = useState(false);
   const [customErrorMsg, setCustomErrorMsg] = useState(exercise.errorMessage);
+  const [submitResult, setSubmitResult] = useState<{ xpEarned: number; attempts: number; completed: boolean } | null>(null);
 
   // Update code when exercise changes
   useEffect(() => {
@@ -41,7 +46,25 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     setCode(exercise.initialCode);
   };
 
-  const handleRunCode = () => {
+  // Submit exercise result, update XP, and handle completion
+  const handleSuccess = async () => {
+    const token = getStoredToken();
+    if (!token) return;
+    try {
+      const result = await submitExercise(token, exercise.id, code, true);
+      if (onAddXp) onAddXp(result.xpEarned);
+      setSubmitResult(result);
+      setShowSuccessModal(true);
+      if (onExerciseCompleted) onExerciseCompleted();
+    } catch (err) {
+      console.error('Exercise submit failed:', err);
+      // Still show success modal per requirements
+      setShowSuccessModal(true);
+      if (onExerciseCompleted) onExerciseCompleted();
+    }
+  };
+
+  const handleRunCode = async () => {
     const trimmed = code.trim();
 
     // Logic validation per exercise
@@ -51,8 +74,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
       const unquotedRegex = /nombre\s*=\s*[a-zA-ZáéíóúÁÉÍÓÚñÑ_]+/;
 
       if (validStringRegex.test(trimmed)) {
-        if (onAddXp) onAddXp(exercise.rewardXp);
-        setShowSuccessModal(true);
+        await handleSuccess();
       } else if (unquotedRegex.test(trimmed)) {
         setCustomErrorMsg('Revisa si pusiste las comillas en el nombre. Las cadenas de texto (strings) siempre necesitan comillas ("texto" o \'texto\').');
         setShowErrorModal(true);
@@ -66,8 +88,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
       const quotedNumberRegex = /edad\s*=\s*(["'])\d+\1/;
 
       if (validNumberRegex.test(trimmed) && !quotedNumberRegex.test(trimmed)) {
-        if (onAddXp) onAddXp(exercise.rewardXp);
-        setShowSuccessModal(true);
+        await handleSuccess();
       } else if (quotedNumberRegex.test(trimmed)) {
         setCustomErrorMsg('Los números enteros no deben ir entre comillas, ya que sino la computadora los interpreta como texto.');
         setShowErrorModal(true);
@@ -78,8 +99,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     } else if (exercise.id === 'ex3') {
       // Expecting: puntos = 100
       if (trimmed.includes('puntos') && trimmed.includes('100')) {
-        if (onAddXp) onAddXp(exercise.rewardXp);
-        setShowSuccessModal(true);
+        await handleSuccess();
       } else {
         setCustomErrorMsg('Revisa si asignaste el valor numérico 100 a la variable puntos (ej: puntos = 100).');
         setShowErrorModal(true);
@@ -87,8 +107,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     } else {
       // Ex 4 or generic
       if (trimmed.includes('=')) {
-        if (onAddXp) onAddXp(exercise.rewardXp);
-        setShowSuccessModal(true);
+        await handleSuccess();
       } else {
         setShowErrorModal(true);
       }
