@@ -22,6 +22,10 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
 }) => {
   // Find current exercise or default to Ex 1
   const unit2 = COURSES_DATA[0].units[1];
+  /**
+   * Índice del ejercicio actual dentro de la unidad.
+   * Se inicializa buscando el ejercicio cuyo id coincide con currentExerciseId.
+   */
   const [exerciseIndex, setExerciseIndex] = useState(() => {
     const idx = unit2.exercises.findIndex(e => e.id === currentExerciseId);
     return idx !== -1 ? idx : 0;
@@ -29,24 +33,40 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
 
   const exercise: Exercise = unit2.exercises[exerciseIndex] || unit2.exercises[0];
 
+  /**
+   * Código del editor, inicializado con el código base del ejercicio.
+   */
   const [code, setCode] = useState(exercise.initialCode);
+  // Estado para controlar la visibilidad del modal de error.
   const [showErrorModal, setShowErrorModal] = useState(false);
+  // Estado para controlar la visibilidad del modal de éxito.
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // Estado para controlar la visibilidad del modal de pista.
   const [showHintModal, setShowHintModal] = useState(false);
+  // Mensaje de error personalizado que se muestra según la validación del ejercicio.
   const [customErrorMsg, setCustomErrorMsg] = useState(exercise.errorMessage);
+  // Resultado de la sumisión al backend: XP ganado, número de intentos y si se completó.
   const [submitResult, setSubmitResult] = useState<{ xpEarned: number; attempts: number; completed: boolean } | null>(null);
 
   // Update code when exercise changes
+  // Cuando cambia el ejercicio seleccionado, reinicializa el código y el mensaje de error.
   useEffect(() => {
     setCode(exercise.initialCode);
     setCustomErrorMsg(exercise.errorMessage);
   }, [exerciseIndex, exercise]);
 
+  /**
+   * Restablece el editor al código inicial del ejercicio.
+   */
   const handleReset = () => {
     setCode(exercise.initialCode);
   };
 
   // Submit exercise result, update XP, and handle completion
+  /**
+   * Envía la solución al backend, actualiza XP y muestra el modal de éxito.
+   * Si ocurre un error en la petición, se muestra igualmente el modal de éxito según requisitos.
+   */
   const handleSuccess = async () => {
     const token = getStoredToken();
     if (!token) return;
@@ -64,6 +84,9 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     }
   };
 
+  /**
+   * Valida el código escrito según el ejercicio actual y muestra errores o confirma éxito.
+   */
   const handleRunCode = async () => {
     const trimmed = code.trim();
 
@@ -114,6 +137,9 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     }
   };
 
+  /**
+   * Avanza al siguiente ejercicio o navega a la vista de detalle de unidad al terminar.
+   */
   const handleNextExercise = () => {
     if (exerciseIndex < unit2.exercises.length - 1) {
       setExerciseIndex(prev => prev + 1);

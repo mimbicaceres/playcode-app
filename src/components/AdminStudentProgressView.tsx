@@ -6,10 +6,13 @@ import { StudentProgressView } from './StudentProgressView';
 // Real "Progreso" for the admin: same frontend as the demo, fed with the
 // registered students from the backend (GET /api/users).
 export const AdminStudentProgressView: React.FC<{ initialStudentId?: string | null }> = ({ initialStudentId = null }) => {
-  const [users, setUsers] = useState<ApiUser[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  /** Lista de usuarios obtenidos del backend; null mientras se cargan. */
+const [users, setUsers] = useState<ApiUser[] | null>(null);
+  /** Indica si ocurrió un error al cargar los usuarios. */
+const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  /** Ejecuta la carga de usuarios al montar el componente. */
+useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
     fetchUsers(token)
@@ -17,12 +20,14 @@ export const AdminStudentProgressView: React.FC<{ initialStudentId?: string | nu
       .catch(() => setLoadError(true));
   }, []);
 
-  const students = useMemo(
+  /** Calcula la lista de estudiantes a partir de los usuarios cargados, memoizando el resultado. */
+const students = useMemo(
     () => (users ?? []).filter((u) => u.role === 'student').map((u) => buildStudentProgressRecord(u)),
     [users]
   );
 
-  return (
+  /** Renderiza la vista de progreso de estudiantes con los datos calculados. */
+return (
     <StudentProgressView
       students={students}
       initialStudentId={initialStudentId}

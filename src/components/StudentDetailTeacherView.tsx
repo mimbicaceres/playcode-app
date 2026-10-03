@@ -11,15 +11,39 @@ interface StudentDetailTeacherViewProps {
 
 const NO_STUDENTS_MESSAGE = 'Todavía no tenés alumnos asignados.';
 
+/**
+ * Vista de detalle del alumno para el rol de docente.
+ * Muestra información del estudiante, permite enviar feedback y navegar entre vistas.
+ */
 export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> = ({ data, onNavigate }) => {
-  const [showMessageBox, setShowMessageBox] = useState(false);
-  const [messageSent, setMessageSent] = useState(false);
-  const [messageText, setMessageText] = useState('');
+  // Estado que controla la visibilidad del cuadro de envío de mensaje al alumno.
+  // Estado que controla la visibilidad del cuadro de envío de mensaje al alumno.
+const [showMessageBox, setShowMessageBox] = useState(false);
+  // Indica si el mensaje ha sido enviado; muestra feedback temporal.
+  // Indica si el mensaje ha sido enviado; muestra feedback temporal.
+const [messageSent, setMessageSent] = useState(false);
+  // Contenido del textarea donde el docente escribe su feedback.
+  // Contenido del textarea donde el docente escribe su feedback.
+const [messageText, setMessageText] = useState('');
 
-  const hasStudent = data.studentName !== null;
-  const unlockedBadges = data.badges.filter((badge) => badge.unlocked).length;
+  // Indica si hay un alumno asignado (para mostrar acciones de feedback).
+  // Indica si hay un alumno asignado (para mostrar acciones de feedback).
+const hasStudent = data.studentName !== null;
+  // Cantidad de insignias desbloqueadas del alumno.
+  // Cantidad de insignias desbloqueadas del alumno.
+const unlockedBadges = data.badges.filter((badge) => badge.unlocked).length;
 
-  const handleSendMessage = (e: React.FormEvent) => {
+/**
+   * Maneja el envío del mensaje de feedback.
+   * Previene el submit por defecto, valida que el texto no esté vacío,
+   * muestra una notificación de envío exitoso y resetea el formulario tras 2 s.
+   */
+  /**
+ * Maneja el envío del mensaje de feedback.
+ * Previene el submit por defecto, valida que el texto no esté vacío,
+ * muestra una notificación de envío exitoso y resetea el formulario tras 2 s.
+ */
+const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim()) return;
     setMessageSent(true);
@@ -165,7 +189,8 @@ export const StudentDetailTeacherView: React.FC<StudentDetailTeacherViewProps> =
               {data.badges.length === 0 && (
                 <p className="p-6 text-xs text-slate-400 text-center">{NO_STUDENTS_MESSAGE}</p>
               )}
-              {data.badges.map((badge) => (
+              // Renderiza cada insignia del alumno con su estado (desbloqueada / pendiente).
+{data.badges.map((badge) => (
                 <div
                   key={badge.id}
                   className="p-3.5 flex items-center justify-between hover:bg-slate-50/80 transition-colors"

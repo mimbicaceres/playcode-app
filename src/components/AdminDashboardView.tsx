@@ -7,10 +7,15 @@ interface AdminDashboardViewProps {
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNavigate }) => {
+  /** Estado activo de la pestaña seleccionada: usuarios, instituciones, gamificación o sistema. */
   const [activeTab, setActiveTab] = useState<'users' | 'schools' | 'gamification' | 'system'>('users');
+  /** Filtro de rol para la lista de usuarios; 'all' muestra todos, de lo contrario filtra por el rol especificado. */
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  /** Texto de búsqueda ingresado para filtrar usuarios por nombre, email o institución. */
   const [searchQuery, setSearchQuery] = useState('');
+  /** Multiplicador global de XP aplicado a la resolución de ejercicios. */
   const [xpMultiplier, setXpMultiplier] = useState(1.5);
+  /** Bandera que muestra temporalmente un aviso de guardado exitoso de la configuración de gamificación. */
   const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
 
   const [usersList, setUsersList] = useState([
@@ -29,6 +34,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
     { id: 's4', name: 'Colegio Nacional de La Plata', province: 'Buenos Aires', studentsCount: 540, teachersCount: 18, plan: 'Plan Educativo Pro', status: 'Activo' },
   ]);
 
+  /** Lista de usuarios filtrada según el rol seleccionado y la cadena de búsqueda (nombre, email o institución). */
   const filteredUsers = usersList.filter(u => {
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,6 +43,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
     return matchesRole && matchesSearch;
   });
 
+  /** Handler que guarda la configuración de gamificación, muestra una notificación y la oculta tras 3 s. */
   const handleSaveGamification = (e: React.FormEvent) => {
     e.preventDefault();
     setSavedSettingsNotice(true);

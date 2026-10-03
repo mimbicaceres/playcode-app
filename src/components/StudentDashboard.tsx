@@ -14,6 +14,22 @@ interface StudentDashboardProps {
   onOpenCourse?: (course: Course) => void;
 }
 
+/**
+ * Vista principal del estudiante.
+ * Muestra información de avatar, progreso y cursos asignados.
+ * @param user Perfil del usuario.
+ * @param onNavigate Callback para cambiar de vista.
+ * @param courses Cursos asignados al estudiante (opcional).
+ * @param onOpenCourse Callback para abrir un curso seleccionado.
+ */
+/**
+ * Vista principal del estudiante.
+ * Muestra información de avatar, progreso y cursos asignados.
+ * @param user Perfil del usuario.
+ * @param onNavigate Callback para cambiar de vista.
+ * @param courses Cursos asignados al estudiante (opcional).
+ * @param onOpenCourse Callback para abrir un curso seleccionado.
+ */
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate, courses, onOpenCourse }) => {
   const firstCourse = courses?.[0];
   return (
@@ -67,7 +83,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
       </section>
 
       {/* Real student: start the first assigned course */}
-      {firstCourse && (
+      // Si hay un curso asignado, muestra el bloque de inicio
+{firstCourse && (
         <section className="flex flex-col gap-3">
           <h2 className="font-heading font-bold text-xl text-[#0b1c30]">
             Empezá a aprender
@@ -100,7 +117,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         </section>
       )}
 
-      {courses && (
+      // Si existen cursos, muestra la lista de cursos
+{courses && (
         <section className="flex flex-col gap-3">
           <div className="flex justify-between items-center">
             <h2 className="font-heading font-bold text-xl text-[#0b1c30]">
@@ -149,7 +167,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
       )}
 
       {/* Demo mode: example content */}
-      {!courses && (<>
+      // Modo demo: muestra contenido de ejemplo cuando no hay cursos
+{!courses && (<>
       {/* Continue Learning Hero Block */}
       <section className="flex flex-col gap-3">
         <h2 className="font-heading font-bold text-xl text-[#0b1c30]">

@@ -320,15 +320,26 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   initialStudentId = null,
 }) => {
   const initialStudent = students.find((s) => s.id === initialStudentId);
+  /** Estado del texto de búsqueda del alumno. */
   const [query, setQuery] = useState(initialStudent?.name ?? '');
+  /** ID del alumno seleccionado; null cuando no hay selección. */
   const [selectedId, setSelectedId] = useState<string | null>(initialStudent?.id ?? null);
+  /** Estado que indica si el dropdown de resultados está abierto. */
   const [isOpen, setIsOpen] = useState(false);
+  /** Índice del elemento resaltado en la lista de sugerencias. */
   const [highlighted, setHighlighted] = useState(0);
   // Real backend progress state
+  /** Progreso real obtenido del backend; null mientras se carga. */
   const [realProgress, setRealProgress] = useState<UserProgress | null>(null);
+  /** Indica si la petición al backend está en curso. */
   const [loading, setLoading] = useState(false);
+  /** Mensaje de error en caso de falla al cargar el progreso. */
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  /**
+   * Effect que carga el progreso del alumno actual desde el backend al montar el componente.
+   * Obtiene el token almacenado, solicita los datos y actualiza los estados de carga/error.
+   */
   useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
@@ -355,6 +366,10 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   // Preselect the requested student once the list is available (it can load
   // asynchronously). Applied only once, so the user can search another student.
   const appliedInitialRef = useRef<string | null>(initialStudent ? initialStudent.id : null);
+  /**
+   * Effect que preselecciona al alumno indicado por `initialStudentId` una vez que la lista de estudiantes está disponible.
+   * Se ejecuta únicamente cuando cambian `students` o `initialStudentId`.
+   */
   useEffect(() => {
     if (!initialStudentId || appliedInitialRef.current === initialStudentId) return;
     const requested = students.find((s) => s.id === initialStudentId);
@@ -374,12 +389,20 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  /**
+   * Handler que selecciona un alumno de la lista de sugerencias.
+   * Actualiza `selectedId`, `query` y cierra el dropdown.
+   */
   const selectStudent = (chosen: StudentProgressRecord) => {
     setSelectedId(chosen.id);
     setQuery(chosen.name);
     setIsOpen(false);
   };
 
+  /**
+   * Handler que responde a cambios en el campo de búsqueda.
+   * Actualiza el texto, reinicia la selección y abre el dropdown.
+   */
   const handleQueryChange = (value: string) => {
     setQuery(value);
     setSelectedId(null); // typing again hides the previous report until a student is chosen
@@ -387,12 +410,19 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
     setIsOpen(true);
   };
 
+  /**
+   * Handler que limpia la búsqueda y cierra el dropdown.
+   */
   const clearSearch = () => {
     setQuery('');
     setSelectedId(null);
     setIsOpen(false);
   };
 
+  /**
+   * Handler de atajos de teclado en el input de búsqueda.
+   * Navega entre resultados con flechas, selecciona con Enter y cierra con Escape.
+   */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -409,6 +439,10 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
     }
   };
 
+  /**
+   * Renderizado del componente.
+   * Muestra un HUD, buscador y, según el estado, carga, progreso real o vista de estudiante.
+   */
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-5 md:py-6 pb-32 flex flex-col gap-5">
 

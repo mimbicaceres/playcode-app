@@ -17,6 +17,11 @@ export interface UserProgress {
   }>;
 }
 
+/**
+ * Obtiene el progreso del estudiante a partir de los registros de ejercicios.
+ * @param userId ID del usuario del cual se quiere obtener el progreso.
+ * @returns Un objeto UserProgress con XP total, ejercicios completados, intentos y detalle por ejercicio.
+ */
 export async function getUserProgress(userId: string): Promise<UserProgress> {
   const records = await prisma.exerciseProgress.findMany({
     where: { userId },
@@ -32,9 +37,9 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
     },
   });
 
-  const totalXp = records.reduce((sum, r) => sum + (r.xpEarned ?? 0), 0);
-  const totalCompleted = records.filter((r) => r.completed).length;
-  const totalAttempts = records.reduce((sum, r) => sum + (r.attempts ?? 0), 0);
+  const totalXp = records.reduce((sum, r) => sum + (r.xpEarned ?? 0), 0); // Suma total de XP ganado
+  const totalCompleted = records.filter((r) => r.completed).length; // Cuenta los ejercicios completados
+  const totalAttempts = records.reduce((sum, r) => sum + (r.attempts ?? 0), 0); // Suma total de intentos realizados
 
   const byExercise = records.map((r) => ({
     exerciseId: r.exerciseId,

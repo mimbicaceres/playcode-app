@@ -12,6 +12,13 @@ interface CourseStudentListProps {
 
 // Compact list of the students of one course, used by the teacher's "Alumnos"
 // view and by "Ver curso". Read-only: the teacher only consults.
+/**
+ * Lista compacta de los estudiantes de un curso específico.
+ * Muestra información resumida y un botón para ver el progreso individual.
+ * @param courseName - Nombre del curso seleccionado.
+ * @param students - Arreglo de registros de progreso de los estudiantes del curso.
+ * @param onViewProgress - Callback que abre la vista de progreso del estudiante seleccionado.
+ */
 export const CourseStudentList: React.FC<CourseStudentListProps> = ({ courseName, students, onViewProgress }) => (
     <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs overflow-hidden">
       <div className="p-5 border-b border-[#e2e8f0] bg-slate-50/50">
@@ -19,7 +26,8 @@ export const CourseStudentList: React.FC<CourseStudentListProps> = ({ courseName
         <p className="text-xs text-slate-500">{courseName}</p>
       </div>
 
-      {students.length === 0 ? (
+      {/* Si no hay estudiantes, muestra un mensaje informativo */
+students.length === 0 ? (
         <div className="py-12 px-4 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 block mb-1">groups</span>
           <p className="text-sm font-semibold text-slate-600">Este curso todavía no tiene alumnos.</p>
@@ -32,7 +40,7 @@ export const CourseStudentList: React.FC<CourseStudentListProps> = ({ courseName
               <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 overflow-hidden flex items-center justify-center shrink-0">
                 {student.avatarUrl ? (
                   <img src={student.avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
+               ) : (/* Renderiza la lista de estudiantes cuando hay datos */
                   <span className="material-symbols-outlined text-2xl text-blue-300">person</span>
                 )}
               </div>

@@ -85,37 +85,49 @@ export const AdminInstituteView: React.FC<AdminInstituteViewProps> = ({
   banner,
   usersEmptyMessage = 'Sin usuarios para mostrar.',
 }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('users');
-  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [xpMultiplier, setXpMultiplier] = useState(data.gamification.xpMultiplier);
-  const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
-  const [modal, setModal] = useState<OpenModal | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  /** Pestaña activa del panel: usuarios, cursos, actividades o configuración. */
+const [activeTab, setActiveTab] = useState<AdminTab>('users');
+  /** Filtro de rol para la tabla de usuarios; 'all' muestra todos. */
+const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  /** Texto de búsqueda ingresado para filtrar usuarios por nombre o email. */
+const [searchQuery, setSearchQuery] = useState('');
+  /** Multiplicador global de XP para la gamificación. */
+const [xpMultiplier, setXpMultiplier] = useState(data.gamification.xpMultiplier);
+  /** Bandera que muestra temporalmente el aviso de guardado exitoso de la configuración. */
+const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
+  /** Estado que controla el modal abierto y sus parámetros. */
+const [modal, setModal] = useState<OpenModal | null>(null);
+  /** Mensaje de notificación que se muestra tras acciones exitosas. */
+const [notice, setNotice] = useState<string | null>(null);
 
-  const closeModal = () => setModal(null);
+  /** Cierra cualquier modal abierto, restableciendo el estado a null. */
+const closeModal = () => setModal(null);
   const modalUser = modal && 'userId' in modal ? data.users.find((u) => u.id === modal.userId) : undefined;
   const modalCourse = modal?.type === 'course' ? data.courses.find((c) => c.id === modal.courseId) : undefined;
   // Runs an action and shows a confirmation above the tabs when it succeeds.
-  const withNotice = async (message: string, save: () => Promise<string | null>) => {
+  /** Ejecuta una acción asíncrona y muestra un mensaje si ésta no devuelve error. */
+const withNotice = async (message: string, save: () => Promise<string | null>) => {
     const error = await save();
     if (!error) setNotice(message);
     return error;
   };
 
-  const filteredUsers = data.users.filter((u) => {
+  /** Lista de usuarios filtrada según rol seleccionado y texto de búsqueda. */
+const filteredUsers = data.users.filter((u) => {
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
     const query = searchQuery.toLowerCase();
     return matchesRole && (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
   });
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  /** Handler del formulario de configuración de gamificación; muestra aviso y lo oculta después de 3 s. */
+const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setSavedSettingsNotice(true);
     setTimeout(() => setSavedSettingsNotice(false), 3000);
   };
 
-  const stats = [
+  /** Estadísticas generales del instituto mostradas en tarjetas superiores. */
+const stats = [
     { label: 'Alumnos', value: data.studentsCount, icon: 'school', iconClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     { label: 'Docentes', value: data.teachersCount, icon: 'co_present', iconClass: 'bg-blue-50 text-blue-700 border-blue-200' },
     { label: 'Cursos activos', value: data.activeCoursesCount, icon: 'menu_book', iconClass: 'bg-amber-50 text-amber-700 border-amber-200' },

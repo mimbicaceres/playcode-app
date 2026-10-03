@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ScreenView, Course } from '../types';
 import { StatusHud } from './ui/StatusHud';
 
@@ -16,6 +16,16 @@ interface CourseMapViewProps {
   onViewCourse?: (course: Course) => void;
 }
 
+/**
+ * Vista del mapa de cursos.
+ * Muestra la lista de cursos disponibles y permite interacción según el modo (estudiante o docente).
+ * @param courses Lista de cursos a mostrar.
+ * @param onNavigate Callback para cambiar la vista principal.
+ * @param onSelectCourse Callback al seleccionar un curso (solo estudiante).
+ * @param backView Vista de retorno del botón "Volver".
+ * @param mode Modo de visualización: 'student' o 'teacher'.
+ * @param onViewCourse Callback para abrir el curso (modo docente).
+ */
 export const CourseMapView: React.FC<CourseMapViewProps> = ({
   courses,
   onNavigate,
@@ -24,9 +34,12 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({
   mode = 'student',
   onViewCourse,
 }) => {
-  const isTeacher = mode === 'teacher';
-  const [lockedMessage, setLockedMessage] = useState<{ courseId: string; text: string } | null>(null);
-  const [activeMessage, setActiveMessage] = useState<{ courseId: string; text: string } | null>(null);
+  // Determina si la vista está en modo docente
+const isTeacher = mode === 'teacher';
+  // Mensaje mostrado cuando el curso está bloqueado (requiere prerequisito)
+const [lockedMessage, setLockedMessage] = useState<{ courseId: string; text: string } | null>(null);
+  // Mensaje mostrado cuando ya existe un curso en progreso y se intenta iniciar otro
+const [activeMessage, setActiveMessage] = useState<{ courseId: string; text: string } | null>(null);
 
   const inProgressCourse = courses.find(c => c.status === 'in_progress');
 
@@ -45,7 +58,8 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({
     return courses.find(c => c.id === prerequisiteId)?.title ?? prerequisiteId;
   };
 
-  const handleCourseClick = (course: Course) => {
+  // Maneja el clic en un curso: determina acciones según estado y modo
+const handleCourseClick = (course: Course) => {
     // Dismiss all messages first
     setLockedMessage(null);
     setActiveMessage(null);
@@ -80,12 +94,14 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({
     onNavigate('course_roadmap');
   };
 
-  const dismissMessages = () => {
+  // Cierra cualquier mensaje de bloqueo o de curso activo
+const dismissMessages = () => {
     setLockedMessage(null);
     setActiveMessage(null);
   };
 
-  const getBadge = (course: Course) => {
+  // Devuelve el badge visual según el estado del curso
+const getBadge = (course: Course) => {
     switch (course.status) {
       case 'in_progress':
         return (
@@ -115,7 +131,8 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({
     }
   };
 
-  const getButtonLabel = (course: Course) => {
+  // Texto del botón principal según el estado del curso
+const getButtonLabel = (course: Course) => {
     switch (course.status) {
       case 'in_progress': return 'Continuar';
       case 'available': return 'Empezar';
@@ -124,7 +141,8 @@ export const CourseMapView: React.FC<CourseMapViewProps> = ({
     }
   };
 
-  const getButtonClass = (course: Course) => {
+  // Clases CSS del botón según el estado del curso
+const getButtonClass = (course: Course) => {
     switch (course.status) {
       case 'in_progress':
         return 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white';

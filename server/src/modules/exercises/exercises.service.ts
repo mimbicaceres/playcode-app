@@ -4,6 +4,11 @@ import { CODIX_CATALOG } from '../../lib/codixCatalog';
 import { Exercise } from '../../types';
 
 /** Helper to locate an exercise definition in the catalog */
+/**
+ * Busca y devuelve la definición del ejercicio dado su ID dentro del catálogo.
+ * @param exerciseId ID del ejercicio a buscar.
+ * @returns Objeto Exercise si se encuentra, o null si no existe.
+ */
 function findExerciseById(exerciseId: string): Exercise | null {
   for (const course of CODIX_CATALOG) {
     for (const unit of course.units) {
@@ -15,6 +20,13 @@ function findExerciseById(exerciseId: string): Exercise | null {
 }
 
 /** Register an attempt for a student */
+/**
+ * Registra un intento de solución de un ejercicio por parte de un estudiante.
+ * @param userId ID del usuario que intenta el ejercicio.
+ * @param exerciseId ID del ejercicio.
+ * @param success Indica si el intento fue exitoso.
+ * @returns Objeto con xpEarned y streakDays actualizados.
+ */
 export async function registerAttempt(
   userId: string,
   exerciseId: string,
@@ -65,6 +77,11 @@ export async function registerAttempt(
 }
 
 /** Express handler for submitting an exercise attempt */
+/**
+ * Manejador Express para recibir la solicitud de envío de intento de ejercicio.
+ * @param req Objeto Request que contiene el cuerpo con la información del intento.
+ * @param res Objeto Response usado para responder al cliente.
+ */
 export async function submitExercise(req: Request, res: Response) {
   const { success } = req.body ?? {};
   if (typeof success !== 'boolean') {

@@ -1,6 +1,11 @@
 import React from 'react';
 
+/**
+ * Vista mostrada cuando el usuario no tiene permisos para acceder a una sección.
+ * Recibe una función `onGoHome` como prop para volver al panel principal.
+ */
 interface AccessDeniedViewProps {
+
   onGoHome: () => void;
 }
 

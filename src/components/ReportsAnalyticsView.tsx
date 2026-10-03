@@ -41,6 +41,11 @@ const HEADERS = {
   },
 };
 
+/**
+ * Vista principal de analítica de reportes.
+ * Renderiza el HUD superior, selector de rango de tiempo, y visualizaciones.
+ * Recibe datos de reportes y configuraciones de alcance (scope).
+ */
 export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
   data: baseData,
   scope,
@@ -50,15 +55,23 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
   // Admin and teacher reports use educational indicators;
   // the default report (demo and student) keeps its original cards.
   const isEducational = scope === 'general' || scope === 'teacher' || scope === 'course';
+  // Estado que guarda el rango de tiempo seleccionado para los reportes (por ejemplo '30d')
   const [timeRange, setTimeRange] = useState<ReportPeriod>('30d');
+  // Indica si se mostró la notificación de exportación exitosa
   const [copiedNotification, setCopiedNotification] = useState(false);
   // Figures of the selected period (the report data covers the last 30 days).
+  // Calcula los datos del reporte filtrados por el rango de tiempo seleccionado
   const data = reportForPeriod(baseData, timeRange);
 
   const hasData = data.coursePerformance.length > 0 || data.totalErrors > 0 || !!data.xpTrend;
 
+  /**
+   * Maneja la acción de exportar el reporte.
+   * Muestra una notificación temporal indicando que la exportación se realizó.
+   */
   const handleExport = () => {
     setCopiedNotification(true);
+    // Oculta la notificación después de 3 segundos
     setTimeout(() => setCopiedNotification(false), 3000);
   };
 

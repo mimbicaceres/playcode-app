@@ -7,6 +7,11 @@ import { AdminInstituteActions, AdminInstituteView } from './AdminInstituteView'
 import { CreateTeacherModal } from './Modals/CreateTeacherModal';
 
 // Message for a failed admin action (null → success).
+/**
+ * Genera un mensaje de error legible para el usuario según el tipo de error recibido.
+ * @param error - Error que puede ser una instancia de ApiError o cualquier otro tipo.
+ * @returns Texto descriptivo del error.
+ */
 function actionError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 409) return 'El email ya está registrado.';
@@ -25,12 +30,21 @@ export const AdminHomeView: React.FC<{ currentUserId: string; onViewStudentProgr
   currentUserId,
   onViewStudentProgress,
 }) => {
-  const [users, setUsers] = useState<ApiUser[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
-  const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  /** Lista de usuarios obtenidos del backend; null mientras se cargan. */
+const [users, setUsers] = useState<ApiUser[] | null>(null);
+  /** Indica si ocurrió un error al cargar los usuarios. */
+const [loadError, setLoadError] = useState(false);
+  /** Controla la visibilidad del modal para crear docentes. */
+const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
+  /** Mensaje de éxito que se muestra temporalmente al crear o actualizar datos. */
+const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadUsers = () => {
+  /**
+ * Carga la lista de usuarios desde el backend.
+ * Obtiene el token almacenado, llama a fetchUsers y actualiza el estado.
+ * Si falla, marca loadError como true.
+ */
+const loadUsers = () => {
     const token = getStoredToken();
     if (!token) return;
     fetchUsers(token)
@@ -41,11 +55,17 @@ export const AdminHomeView: React.FC<{ currentUserId: string; onViewStudentProgr
       .catch(() => setLoadError(true));
   };
 
-  useEffect(loadUsers, []);
+  /** Ejecuta loadUsers una sola vez al montar el componente. */
+useEffect(loadUsers, []);
 
   const data = useMemo(() => buildAdminInstituteData(users ?? []), [users]);
 
-  const handleTeacherCreated = (teacher: ApiUser) => {
+  /**
+ * Callback invocado cuando se crea un nuevo docente.
+ * Muestra un mensaje de éxito y vuelve a cargar la lista de usuarios.
+ * @param teacher - Objeto del docente recién creado.
+ */
+const handleTeacherCreated = (teacher: ApiUser) => {
     setSuccessMessage(
       `Docente ${teacher.name} ${teacher.lastName} creado. Ya puede iniciar sesión con ${teacher.email}.`
     );
@@ -53,7 +73,12 @@ export const AdminHomeView: React.FC<{ currentUserId: string; onViewStudentProgr
   };
 
   // Sends a change to the backend and replaces the user with the saved version.
-  const saveUser = async (send: (token: string) => Promise<{ user: ApiUser }>): Promise<string | null> => {
+  /**
+ * Envía una solicitud de actualización de usuario al backend y actualiza el estado local.
+ * @param send - Función que recibe el token y devuelve una promesa con el usuario actualizado.
+ * @returns null si la operación fue exitosa, o un mensaje de error en caso contrario.
+ */
+const saveUser = async (send: (token: string) => Promise<{ user: ApiUser }>): Promise<string | null> => {
     const token = getStoredToken();
     if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
     try {
@@ -65,14 +90,16 @@ export const AdminHomeView: React.FC<{ currentUserId: string; onViewStudentProgr
     }
   };
 
-  const actions: AdminInstituteActions = {
+  /** Acciónes disponibles para la vista de gestión de instituciones. */
+const actions: AdminInstituteActions = {
     createTeacher: () => setIsCreateTeacherOpen(true),
     updateUser: (id, values) => saveUser((token) => updateUserRequest(token, id, values)),
     setUserActive: (id, isActive) => saveUser((token) => setUserActiveRequest(token, id, isActive)),
     setUserCourses: (id, courseIds) => saveUser((token) => setUserCoursesRequest(token, id, courseIds)),
   };
 
-  const banner = successMessage && (
+  /** Banner que muestra el mensaje de éxito cuando successMessage tiene valor. */
+const banner = successMessage && (
     <div className="flex items-start justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
       <span className="flex items-center gap-2">
         <span className="material-symbols-outlined text-base text-emerald-600">check_circle</span>

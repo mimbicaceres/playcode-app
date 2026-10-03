@@ -19,6 +19,16 @@ interface CourseRoadmapViewProps {
   onViewStudentProgress?: (studentId: string) => void;
 }
 
+/**
+ * Vista del roadmap del curso.
+ * Muestra las unidades y actividades del curso seleccionado.
+ * @param onNavigate Callback para cambiar la vista principal.
+ * @param course Curso a mostrar (null para demo).
+ * @param mode Modo de visualización: 'student' o 'teacher'.
+ * @param teacherSummary Resumen del progreso promedio de los alumnos (modo docente).
+ * @param teacherStudents Lista de estudiantes del curso (modo docente).
+ * @param onViewStudentProgress Callback para ver el progreso individual de un estudiante.
+ */
 export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
   onNavigate,
   course: courseProp,
@@ -52,9 +62,11 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
   const course: Course = courseProp ?? COURSES_DATA.find(c => c.status === 'in_progress') ?? COURSES_DATA[0];
   const isReviewMode = !isTeacher && course.status === 'completed';
 
-  const renderUnit = (unit: Unit, index: number) => {
+  // Renderiza una unidad del curso según su estado y modo
+const renderUnit = (unit: Unit, index: number) => {
     // Teacher: every unit is shown the same way (no student progress/locks).
-    if (isTeacher) {
+    // Modo docente: siempre muestra la unidad sin bloqueos ni progreso del estudiante
+if (isTeacher) {
       return (
         <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12">
           <div className="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-md border-4 border-white z-10 mb-2 font-heading font-bold text-lg">
@@ -78,7 +90,8 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
     const isActive = effectiveStatus === 'active';
     const isLocked = !isReviewMode && unit.status === 'locked';
 
-    if (isCompleted && !isReviewMode) {
+    // Unidad completada (y no en modo repaso) muestra un ícono de verificación
+if (isCompleted && !isReviewMode) {
       return (
         <div
           key={unit.id}
@@ -97,7 +110,8 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
       );
     }
 
-    if (isActive) {
+    // Unidad activa (en progreso) muestra botón para continuar o reproducir
+if (isActive) {
       return (
         <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12 group">
           <div
@@ -132,7 +146,7 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
       );
     }
 
-    // Locked unit
+    // Unidad bloqueada: muestra indicación de prerequisito
     return (
       <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12 opacity-60">
         <div className="w-14 h-14 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shadow-xs border-4 border-white z-10 mb-2">
