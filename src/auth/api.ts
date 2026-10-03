@@ -148,6 +148,18 @@ export function fetchTeaching(token: string) {
   return request<{ courses: TeachingCourse[] }>('/users/me/teaching', { headers: authHeaders(token) });
 }
 
+export async function assignCourseToStudent(token: string, studentId: string, courseId: string) {
+  return request<{ user: ApiUser }>(
+    '/users/me/assign',
+    {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ studentId, courseId }),
+    },
+  );
+}
+
+
 export function toUserProfile(user: ApiUser): UserProfile {
   return {
     id: user.id,
@@ -180,5 +192,28 @@ export async function submitExercise(
       body: JSON.stringify({ code, success })
     }
   );
+}
+
+// Fetch student progress from backend
+export interface UserProgress {
+  totalXp: number;
+  totalCompleted: number;
+  totalAttempts: number;
+  byExercise: {
+    exerciseId: string;
+    unitId: string | null;
+    courseId: string | null;
+    completed: boolean;
+    attempts: number;
+    xpEarned: number;
+    completedAt: string | null;
+    lastAttempt: string | null;
+  }[];
+}
+
+export function fetchMyProgress(token: string): Promise<UserProgress> {
+  return request<UserProgress>('/users/me/progress', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 

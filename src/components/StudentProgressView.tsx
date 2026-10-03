@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudentProgressRecord } from '../types';
 import { StatusHud } from './ui/StatusHud';
+import { fetchMyProgress, getStoredToken, UserProgress } from '../auth/api';
+import { EmptyState } from './ui/EmptyState';
 
 interface StudentProgressViewProps {
   // Demo mode passes DEMO_STUDENT_PROGRESS from mockData; real mode passes the
@@ -74,11 +76,10 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                 <span className="material-symbols-outlined text-base text-slate-400">menu_book</span>
                 {student.courseName ? `Curso: ${student.courseName}` : 'Sin curso asignado'}
               </span>
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                student.isActive
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${student.isActive
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>
+                }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 {student.isActive ? 'Alumno activo' : 'Sin actividad reciente'}
               </span>
@@ -229,18 +230,16 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
             <div className="flex flex-col gap-2.5">
               {student.attentionAreas.map((area) => (
                 <div key={area.title} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                    area.status === 'reinforce' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${area.status === 'reinforce' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'
+                    }`}>
                     <span className="material-symbols-outlined text-xl">priority_high</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#0b1c30]">{area.title}</p>
                     <p className="text-[11px] text-slate-500 truncate">{area.detail}</p>
                   </div>
-                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${
-                    area.status === 'reinforce' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'
-                  }`}>
+                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${area.status === 'reinforce' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-700'
+                    }`}>
                     {area.status === 'reinforce' ? 'Reforzar' : 'Pendiente'}
                   </span>
                 </div>
@@ -261,11 +260,10 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                   <span className="material-symbols-outlined text-base text-slate-400">draft</span>
                   <span className="text-slate-500 w-20 shrink-0">{activity.when}</span>
                   <span className="flex-1 text-slate-700 truncate">{activity.exercise}</span>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                    activity.correct
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${activity.correct
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-red-50 text-red-600 border-red-200'
-                  }`}>
+                    }`}>
                     <span className="material-symbols-outlined text-xs">{activity.correct ? 'check' : 'close'}</span>
                     {activity.correct ? 'Correcto' : 'Incorrecto'}
                   </span>
@@ -326,6 +324,26 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   const [selectedId, setSelectedId] = useState<string | null>(initialStudent?.id ?? null);
   const [isOpen, setIsOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
+  // Real backend progress state
+  const [realProgress, setRealProgress] = useState<UserProgress | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    setLoading(true);
+    fetchMyProgress(token)
+      .then((data) => {
+        setRealProgress(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+      });
+  }, []);
+
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hasStudents = students.length > 0;
@@ -471,22 +489,80 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
         </div>
       </StatusHud>
 
-      {student ? (
-        <StudentProgressDetails student={student} />
+      {loading ? (
+        <div className="flex justify-center items-center py-10 text-[#737686]">
+          Cargando progreso...
+        </div>
+      ) : realProgress ? (
+        realProgress.byExercise.length === 0 ? (
+          <EmptyState
+            title="Sin progreso aún"
+            message="Todavía no completaste ningún ejercicio"
+          >
+            <p className="text-sm text-[#434655] mt-1">
+              ¡Resolvé tu primer ejercicio para ver tu progreso aquí!
+            </p>
+          </EmptyState>
+        ) : (
+          <>
+            {/* Summary cards */}
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">Ejercicios completados</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalCompleted}</span>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">XP ganado</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalXp}</span>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">Intentos totales</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalAttempts}</span>
+              </div>
+            </section>
+
+            {/* List of completed exercises */}
+            <section className="grid gap-4">
+              {realProgress.byExercise
+                .filter(item => item.completed)
+                .map(item => (
+                  <div key={item.exerciseId} className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex items-center justify-between">
+                    <div className="font-heading font-bold text-[#0b1c30]">Ejercicio {item.exerciseId}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {item.xpEarned} XP
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {new Date(item.completedAt!).toLocaleDateString('es-AR')}
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {item.attempts} intento{item.attempts !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </section>
+          </>
+        )
       ) : (
-        <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
-            <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
-          </div>
-          <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
-            {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
-          </h2>
-          <p className="text-sm text-slate-500 max-w-md">
-            {hasStudents
-              ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
-              : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
-          </p>
-        </section>
+        // Fallback UI (demo mode)
+        student ? (
+          <StudentProgressDetails student={student} />
+        ) : (
+          <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
+              <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
+            </div>
+            <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
+              {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
+            </h2>
+            <p className="text-sm text-slate-500 max-w-md">
+              {hasStudents
+                ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
+                : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
+            </p>
+          </section>
+        )
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScreenView, TeacherCourseSummary, TeacherDashboardData } from '../types';
 import { StatusHud } from './ui/StatusHud';
 import { NewCourseModal } from './Modals/NewCourseModal';
+import { assignCourseToStudent, getStoredToken } from '../auth/api';
 
 interface TeacherDashboardProps {
   // Real teachers get their own data (zeros until something is assigned);
@@ -50,6 +51,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     );
   };
 
+  const handleAssign = async (courseId: string) => {
+    const studentId = prompt('Ingrese ID del alumno');
+    if (!studentId) return;
+    const token = getStoredToken();
+    if (!token) {
+      alert('No hay token almacenado');
+      return;
+    }
+    try {
+      await assignCourseToStudent(token, studentId, courseId);
+      alert('Alumno asignado con éxito');
+    } catch (e) {
+      console.error(e);
+      alert('Error al asignar alumno');
+    }
+  };
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] bg-[#f8f9ff]">
       {/* Main Panel Content */}
@@ -237,6 +254,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             title="Editar contenidos de unidad"
                           >
                             <span className="material-symbols-outlined text-base">edit_note</span>
+                          </button>
+                          <button 
+                            onClick={() => handleAssign(c.id)}
+                            className="ml-2 p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
+                            title="Asignar alumno a este curso"
+                          >
+                            <span className="material-symbols-outlined text-base">person_add</span>
                           </button>
                         </td>
                       </tr>
