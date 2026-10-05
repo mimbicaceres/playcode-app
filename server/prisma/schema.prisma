@@ -35,13 +35,46 @@ model User {
   exerciseProgresses ExerciseProgress[]
 }
 
+model Course {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String?
+  description String?
+  units       Unit[]
+  assignments CourseAssignment[]
+  progresses ExerciseProgress[]
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  title     String?
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  exercises Exercise[]
+  progresses ExerciseProgress[]
+
+}
+
+model Exercise {
+  id      String   @id @default(uuid())
+  slug    String?
+  title   String?
+  unit    Unit     @relation(fields: [unitId], references: [id])
+  unitId  String
+}
+
 // Course of the CODIX catalog assigned by an admin to a student or a teacher.
 // Courses are predefined by CODIX (not stored here): courseId is the catalog id.
 model CourseAssignment {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   userId    String
+  // slug reference (original) – keep for backward compatibility
   courseId  String
   createdAt DateTime @default(now())
+
+  // Real FK to Course record
+  course   Course @relation(fields: [courseId], references: [id])
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -63,9 +96,12 @@ model ExerciseProgress {
   exerciseId  String
 
   // Opcionales – se guardan para facilitar consultas y filtros
-  unitId      String?   // p.e. "unit-3"
-  courseId    String?   // p.e. "prog1"
+  // slug references (original)
+  unitId   String?   // p.e. "unit-3"
+  courseId String?   // p.e. "prog1"
 
+  unit   Unit?   @relation(fields: [unitId], references: [id])
+  course Course? @relation(fields: [courseId], references: [id])
   // Estadísticas
   attempts    Int       @default(0)      // cuántas veces se intentó
   completed   Boolean   @default(false)  // true la primera vez que se pasa
