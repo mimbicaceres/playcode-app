@@ -152,10 +152,10 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
     <div className="bg-[#f8f9ff] flex-1 flex flex-col antialiased">
       {/* Top Chrome / Navy Context Bar (sits right below the global h-16 Navigation) */}
       <header className="bg-[#0b1c30] text-white sticky top-16 z-40 border-b border-white/10 shadow-md">
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 w-full max-w-5xl mx-auto">
+        <div className="flex items-center justify-between px-4 md:px-8 py-2 w-full max-w-5xl mx-auto">
           <button
             onClick={() => onNavigate('unit_detail')}
-            className="text-slate-300 hover:text-white hover:bg-white/10 rounded-xl p-2 transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
+            className="text-slate-300 hover:text-white hover:bg-white/10 rounded-xl p-1.5 transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
             aria-label="Volver a la unidad"
           >
             <span className="material-symbols-outlined text-2xl">arrow_back</span>
@@ -165,7 +165,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
             <span className="text-[10px] sm:text-[11px] font-bold text-blue-300 uppercase tracking-wider">
               Programación 1 • Unidad 2
             </span>
-            <h1 className="font-heading font-bold text-base sm:text-lg text-white tracking-tight">
+            <h1 className="font-heading font-bold text-base sm:text-lg text-white tracking-tight leading-tight">
               {exercise.title}
             </h1>
           </div>
@@ -186,10 +186,10 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
       </header>
 
       {/* Main Coding Canvas */}
-      <main className="flex-grow flex flex-col items-center px-4 py-6 w-full max-w-4xl mx-auto gap-5 pb-32">
+      <main className="flex-grow flex flex-col items-center px-4 py-3 w-full max-w-4xl mx-auto gap-3">
         {/* Instruction Card */}
-        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-4 md:p-5 shadow-[0px_4px_16px_rgba(0,0,0,0.04)] w-full flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-200 shadow-xs bg-blue-50 flex items-center justify-center">
+        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-3 shadow-[0px_4px_16px_rgba(0,0,0,0.04)] w-full flex items-start gap-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-2xl overflow-hidden border-2 border-blue-200 shadow-xs bg-blue-50 flex items-center justify-center">
             <img 
               src={MASCOT_IMAGES.roundAvatar} 
               alt="Carpincho Tutor" 
@@ -197,11 +197,11 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
             />
           </div>
           <div className="flex-grow min-w-0">
-            <div className="bg-[#eff4ff] p-4 rounded-2xl rounded-tl-none relative border border-blue-100">
+            <div className="bg-[#eff4ff] px-3.5 py-2.5 rounded-2xl rounded-tl-none relative border border-blue-100">
               <span className="text-[11px] font-bold text-[#2563eb] uppercase tracking-wider block mb-1">
                 Instrucción
               </span>
-              <p className="text-sm md:text-base text-[#0b1c30] leading-relaxed">
+              <p className="text-sm md:text-[15px] text-[#0b1c30] leading-snug">
                 {exercise.instruction}
               </p>
             </div>
@@ -209,7 +209,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
         </div>
 
         {/* Code Editor Container */}
-        <div className="w-full flex flex-col gap-2">
+        <div className="w-full flex flex-col gap-1.5">
           <div className="flex justify-between items-center px-2">
             <span className="text-xs font-semibold text-[#434655] flex items-center gap-1.5 font-mono">
               <span className="material-symbols-outlined text-sm text-[#2563eb]">code</span>
@@ -236,7 +236,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
           {/* Dark Mac-style Code Window */}
           <div className="bg-[#0b1c30] rounded-2xl overflow-hidden shadow-xl flex flex-col border border-slate-700/80 focus-within:ring-2 focus-within:ring-blue-400 transition-all">
             {/* Window Header */}
-            <div className="bg-[#071322] px-4 py-2.5 flex items-center justify-between border-b border-white/10">
+            <div className="bg-[#071322] px-4 py-2 flex items-center justify-between border-b border-white/10">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500/90" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/90" />
@@ -246,9 +246,9 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
             </div>
 
             {/* Editor Body */}
-            <div className="flex w-full min-h-[220px] text-[#e2e8f0] font-mono text-sm">
+            <div className="flex w-full min-h-[150px] text-[#e2e8f0] font-mono text-sm">
               {/* Line Numbers */}
-              <div className="w-10 bg-[#071322]/60 text-right pr-3 py-4 text-slate-500 select-none border-r border-white/10 text-xs">
+              <div className="w-10 bg-[#071322]/60 text-right pr-3 py-3 text-slate-500 select-none border-r border-white/10 text-xs">
                 {code.split('\n').map((_, i) => (
                   <div key={i} className="leading-[26px]">
                     {i + 1}
@@ -257,11 +257,11 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
               </div>
 
               {/* Textarea */}
-              <div className="flex-grow p-4 relative">
+              <div className="flex-grow p-3 relative">
                 <textarea
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full h-full min-h-[190px] bg-transparent text-[#e2e8f0] font-mono text-sm leading-[26px] focus:outline-none resize-none caret-[#ffb95f] selection:bg-blue-600/40"
+                  className="w-full h-full min-h-[130px] bg-transparent text-[#e2e8f0] font-mono text-sm leading-[26px] focus:outline-none resize-none caret-[#ffb95f] selection:bg-blue-600/40"
                   spellCheck={false}
                   placeholder="# Escribe tu código aquí..."
                 />
@@ -270,7 +270,7 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
           </div>
 
           {/* Quick test preset helpers */}
-          <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 px-1 pt-1 gap-2">
+          <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 px-1 gap-2">
             <span className="text-[11px] font-medium">Pruebas rápidas:</span>
             <div className="flex items-center gap-2">
               <button
@@ -292,30 +292,30 @@ export const ExerciseCodingView: React.FC<ExerciseCodingViewProps> = ({
         </div>
 
         {/* 3D Tactile Action CTA Button */}
-        <div className="w-full pt-3">
+        <div className="w-full">
           <button
             onClick={handleRunCode}
-            className="btn-game-amber w-full py-4 text-base flex justify-center items-center gap-2"
+            className="btn-game-amber w-full py-2.5 text-sm flex justify-center items-center gap-2"
           >
-            <span className="material-symbols-outlined text-2xl fill">play_arrow</span>
+            <span className="material-symbols-outlined text-xl fill">play_arrow</span>
             <span>Ejecutar y Verificar Código</span>
           </button>
         </div>
       </main>
 
       {/* Bottom Context Bar */}
-      <footer className="fixed bottom-0 left-0 w-full bg-white border-t border-[#e2e8f0] shadow-lg px-6 py-4 flex justify-between items-center z-40">
+      <footer className="sticky bottom-0 w-full bg-white border-t border-[#e2e8f0] shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-6 py-2.5 flex justify-between items-center z-40">
         <div className="flex items-center gap-3">
-          <div className="bg-amber-100 p-2 rounded-xl flex items-center justify-center">
+          <div className="bg-amber-100 p-1.5 rounded-xl flex items-center justify-center">
             <span className="material-symbols-outlined text-amber-600 fill text-xl">star</span>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col leading-tight">
             <span className="text-[11px] font-semibold text-[#737686]">Recompensa</span>
             <span className="text-sm font-extrabold text-[#784b00]">+{exercise.rewardXp} XP</span>
           </div>
         </div>
 
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end leading-tight">
           <span className="text-[11px] font-semibold text-[#737686]">Progreso en unidad</span>
           <span className="text-sm font-extrabold text-[#2563eb]">
             {exerciseIndex + 1} / {unit2.exercises.length}

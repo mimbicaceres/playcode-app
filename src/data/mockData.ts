@@ -647,3 +647,59 @@ export const DEMO_STUDENT_PROGRESS: StudentProgressRecord[] = [
     ]
   }
 ];
+
+// ---------------------------------------------------------------------------
+// Demo: datos de ejemplo para el inicio del alumno (solo se usan en modo demo).
+// ---------------------------------------------------------------------------
+
+export interface DemoHomeCourse {
+  id: string;
+  title: string;
+  // Texto corto que se muestra dentro del cuadro de color (ej. "JS", "C++").
+  initials: string;
+  // Color del cuadro y de la barra de progreso.
+  color: string;
+  percent: number;
+}
+
+export interface DemoHomeAchievement {
+  id: string;
+  title: string;
+  iconName: string;
+  color: string;
+  unlocked: boolean;
+}
+
+export interface DemoHomeActivity {
+  id: string;
+  text: string;
+  timeAgo: string;
+  iconName: string;
+  color: string;
+}
+
+export const DEMO_STUDENT_HOME = {
+  courses: [
+    { id: 'dc1', title: 'JavaScript Básico', initials: 'JS', color: '#d97706', percent: 100 },
+    { id: 'dc2', title: 'Introducción a C++', initials: 'C++', color: '#2563eb', percent: 30 },
+    { id: 'dc3', title: 'CSS Avanzado', initials: 'CSS', color: '#7c3aed', percent: 75 },
+    { id: 'dc4', title: 'React Inicial', initials: 'Re', color: '#0891b2', percent: 0 },
+    { id: 'dc5', title: 'Node.js Fundamentos', initials: 'No', color: '#16a34a', percent: 20 },
+    { id: 'dc6', title: 'Git Básico', initials: 'Git', color: '#ea580c', percent: 50 },
+  ] as DemoHomeCourse[],
+
+  achievements: [
+    { id: 'da1', title: 'Primer curso', iconName: 'emoji_events', color: '#16a34a', unlocked: true },
+    { id: 'da2', title: 'Racha 7 días', iconName: 'local_fire_department', color: '#7c3aed', unlocked: true },
+    { id: 'da3', title: '10 lecciones', iconName: 'code', color: '#2563eb', unlocked: true },
+    { id: 'da4', title: 'Próximamente', iconName: 'lock', color: '#94a3b8', unlocked: false },
+  ] as DemoHomeAchievement[],
+
+  activity: [
+    { id: 'dact1', text: 'Completaste Unidad 1 - Introducción', timeAgo: 'Hace 2 días', iconName: 'check_circle', color: '#16a34a' },
+    { id: 'dact2', text: 'Viste una lección de CSS', timeAgo: 'Hace 3 días', iconName: 'play_circle', color: '#2563eb' },
+    { id: 'dact3', text: 'Completaste un quiz', timeAgo: 'Hace 4 días', iconName: 'check_circle', color: '#16a34a' },
+  ] as DemoHomeActivity[],
+
+  tip: 'La práctica constante es la clave. Intenta resolver pequeños ejercicios todos los días.',
+};

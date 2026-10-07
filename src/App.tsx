@@ -411,10 +411,15 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           )
         )}
 
-        {activeView === 'profile' && viewUser && (
+               {activeView === 'profile' && viewUser && (
           <StudentProfileView
             user={viewUser}
             badges={isDemo ? BADGES : REAL_BADGES}
+            courses={isRealStudent ? visibleCourses : undefined}
+            onOpenCourse={(course) => {
+              setSelectedCourse(course);
+              setCurrentView('course_roadmap');
+            }}
             onUpdateProfile={handleUpdateProfile}
             onNavigate={setCurrentView}
           />
