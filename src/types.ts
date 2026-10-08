@@ -299,6 +299,7 @@ export interface StudentProgressRecord {
   xpProgressPercent: number;
   badgesUnlocked: number;
   badgesTotal: number;
+  assignedCourses?: any[];
   overallProgress: number;
   exercisesSolved: number;
   exercisesTotal: number;

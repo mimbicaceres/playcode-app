@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudentProgressRecord } from '../types';
 import { StatusHud } from './ui/StatusHud';
+import { EmptyState } from './ui/EmptyState';
 
 interface StudentProgressViewProps {
   // Demo mode passes DEMO_STUDENT_PROGRESS from mockData; real mode passes the
@@ -75,8 +76,8 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                 {student.courseName ? `Curso: ${student.courseName}` : 'Sin curso asignado'}
               </span>
               <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${student.isActive
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-slate-100 text-slate-500 border-slate-200'
                 }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 {student.isActive ? 'Alumno activo' : 'Sin actividad reciente'}
@@ -259,8 +260,8 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                   <span className="text-slate-500 w-20 shrink-0">{activity.when}</span>
                   <span className="flex-1 text-slate-700 truncate">{activity.exercise}</span>
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${activity.correct
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-red-50 text-red-600 border-red-200'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-red-50 text-red-600 border-red-200'
                     }`}>
                     <span className="material-symbols-outlined text-xs">{activity.correct ? 'check' : 'close'}</span>
                     {activity.correct ? 'Correcto' : 'Incorrecto'}
@@ -492,10 +493,17 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
             )}
           </div>
         </div>
-      </StatusHud>
 
+      </StatusHud>
       {student ? (
-        <StudentProgressDetails student={student} />
+        student.assignedCourses && student.assignedCourses.length > 0 ? (
+          <StudentProgressDetails student={student} />
+        ) : (
+          <EmptyState
+            title="Sin cursos asignados"
+            message="Estás registrado, pero todavía no tenés un curso asignado. Tu docente o administrador debe asignarte a un curso para que puedas comenzar."
+          />
+        )
       ) : (
         <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
           <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
