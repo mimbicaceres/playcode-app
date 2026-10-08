@@ -5,6 +5,8 @@ import { CODIX_CATALOG } from '../src/lib/codixCatalog';
 /**
  * Populate Course and Unit tables from the static catalog.
  * Uses upsert so the script can be run repeatedly without creating duplicates.
+ * The primary key is the catalog slug, so CourseAssignment.courseId and
+ * ExerciseProgress.courseId/unitId keep holding the catalog ids ("prog1", "u1").
  */
 async function main() {
   const prisma = new PrismaClient();
@@ -18,6 +20,7 @@ async function main() {
           description: catalogCourse.description,
         },
         create: {
+          id: catalogCourse.id,
           slug: catalogCourse.id,
           title: catalogCourse.title,
           description: catalogCourse.description,
@@ -33,6 +36,7 @@ async function main() {
             courseId: course.id,
           },
           create: {
+            id: catalogUnit.id,
             slug: catalogUnit.id,
             title: catalogUnit.title,
             courseId: course.id,

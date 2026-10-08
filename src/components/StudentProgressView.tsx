@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudentProgressRecord } from '../types';
 import { StatusHud } from './ui/StatusHud';
-import { fetchMyProgress, getStoredToken, UserProgress } from '../auth/api';
-import { EmptyState } from './ui/EmptyState';
 
 interface StudentProgressViewProps {
   // Demo mode passes DEMO_STUDENT_PROGRESS from mockData; real mode passes the
@@ -328,33 +326,6 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   /** Índice del elemento resaltado en la lista de sugerencias. */
   const [highlighted, setHighlighted] = useState(0);
-  // Real backend progress state
-  /** Progreso real obtenido del backend; null mientras se carga. */
-  const [realProgress, setRealProgress] = useState<UserProgress | null>(null);
-  /** Indica si la petición al backend está en curso. */
-  const [loading, setLoading] = useState(false);
-  /** Mensaje de error en caso de falla al cargar el progreso. */
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  /**
-   * Effect que carga el progreso del alumno actual desde el backend al montar el componente.
-   * Obtiene el token almacenado, solicita los datos y actualiza los estados de carga/error.
-   */
-  useEffect(() => {
-    const token = getStoredToken();
-    if (!token) return;
-    setLoading(true);
-    fetchMyProgress(token)
-      .then((data) => {
-        setRealProgress(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoadError(err instanceof Error ? err.message : String(err));
-        setLoading(false);
-      });
-  }, []);
-
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hasStudents = students.length > 0;
@@ -523,80 +494,22 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
         </div>
       </StatusHud>
 
-      {loading ? (
-        <div className="flex justify-center items-center py-10 text-[#737686]">
-          Cargando progreso...
-        </div>
-      ) : realProgress ? (
-        realProgress.byExercise.length === 0 ? (
-          <EmptyState
-            title="Sin progreso aún"
-            message="Todavía no completaste ningún ejercicio"
-          >
-            <p className="text-sm text-[#434655] mt-1">
-              ¡Resolvé tu primer ejercicio para ver tu progreso aquí!
-            </p>
-          </EmptyState>
-        ) : (
-          <>
-            {/* Summary cards */}
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
-                <span className="text-sm text-slate-500">Ejercicios completados</span>
-                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalCompleted}</span>
-              </div>
-              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
-                <span className="text-sm text-slate-500">XP ganado</span>
-                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalXp}</span>
-              </div>
-              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
-                <span className="text-sm text-slate-500">Intentos totales</span>
-                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalAttempts}</span>
-              </div>
-            </section>
-
-            {/* List of completed exercises */}
-            <section className="grid gap-4">
-              {realProgress.byExercise
-                .filter(item => item.completed)
-                .map(item => (
-                  <div key={item.exerciseId} className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex items-center justify-between">
-                    <div className="font-heading font-bold text-[#0b1c30]">Ejercicio {item.exerciseId}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {item.xpEarned} XP
-                      </span>
-                      <span className="text-sm text-slate-600">
-                        {new Date(item.completedAt!).toLocaleDateString('es-AR')}
-                      </span>
-                      <span className="text-sm text-slate-600">
-                        {item.attempts} intento{item.attempts !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-            </section>
-          </>
-        )
+      {student ? (
+        <StudentProgressDetails student={student} />
       ) : (
-        // Fallback UI (demo mode)
-        student ? (
-          <StudentProgressDetails student={student} />
-        ) : (
-          <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
-              <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
-            </div>
-            <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
-              {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
-            </h2>
-            <p className="text-sm text-slate-500 max-w-md">
-              {hasStudents
-                ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
-                : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
-            </p>
-          </section>
-        )
+        <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
+            <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
+          </div>
+          <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
+            {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
+          </h2>
+          <p className="text-sm text-slate-500 max-w-md">
+            {hasStudents
+              ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
+              : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
+          </p>
+        </section>
       )}
     </div>
   );

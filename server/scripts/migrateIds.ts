@@ -2,53 +2,42 @@
 import { PrismaClient } from '@prisma/client';
 
 /**
- * Map existing slug strings to real FK UUIDs.
- * Fills the temporary FK columns (courseFkId, unitFkId) added to the schema.
+ * Map existing slug strings to real FK ids.
+ * Fills the temporary FK columns (courseFkId, unitFkId) added by the
+ * add_temp_fk_columns migration. Run it after that migration and
+ * populateCatalog.ts, and before switch_to_real_fks.
+ *
+ * Uses raw SQL because the generated client follows the final schema, where
+ * the temporary columns no longer exist.
  */
 async function main() {
   const prisma = new PrismaClient();
   try {
-    // CourseAssignment migration
-    const assignments = await prisma.courseAssignment.findMany({
-      select: { id: true, courseId: true },
-    });
-    for (const a of assignments) {
-      const course = await prisma.course.findUnique({ where: { slug: a.courseId } });
-      if (course) {
-        await prisma.courseAssignment.update({
-          where: { id: a.id },
-          data: { courseFkId: course.id },
-        });
-      } else {
-        console.warn(`⚠️ No Course for slug ${a.courseId} (assignment ${a.id})`);
-      }
+    const assignments = await prisma.$executeRawUnsafe(`
+      UPDATE "CourseAssignment" ca SET "courseFkId" = c."id"
+      FROM "Course" c WHERE c."slug" = ca."courseId"`);
+    const progressCourses = await prisma.$executeRawUnsafe(`
+      UPDATE "ExerciseProgress" ep SET "courseFkId" = c."id"
+      FROM "Course" c WHERE c."slug" = ep."courseId"`);
+    const progressUnits = await prisma.$executeRawUnsafe(`
+      UPDATE "ExerciseProgress" ep SET "unitFkId" = u."id"
+      FROM "Unit" u WHERE u."slug" = ep."unitId"`);
+
+    // courseId becomes NOT NULL: assignments to unknown courses cannot be kept.
+    const orphans = await prisma.$queryRawUnsafe<{ id: string; courseId: string }[]>(
+      `SELECT "id", "courseId" FROM "CourseAssignment" WHERE "courseFkId" IS NULL`,
+    );
+    for (const o of orphans) {
+      console.warn(`⚠️ No Course for slug ${o.courseId} (assignment ${o.id}), deleting it`);
+    }
+    if (orphans.length > 0) {
+      await prisma.$executeRawUnsafe(`DELETE FROM "CourseAssignment" WHERE "courseFkId" IS NULL`);
     }
 
-    // ExerciseProgress migration
-    const progresses = await prisma.exerciseProgress.findMany({
-      select: { id: true, courseId: true, unitId: true },
-    });
-    for (const p of progresses) {
-      const updates: any = {};
-      if (p.courseId) {
-        const course = await prisma.course.findUnique({ where: { slug: p.courseId } });
-        if (course) updates.courseFkId = course.id;
-        else console.warn(`⚠️ No Course for slug ${p.courseId} (progress ${p.id})`);
-      }
-      if (p.unitId) {
-        const unit = await prisma.unit.findUnique({ where: { slug: p.unitId } });
-        if (unit) updates.unitFkId = unit.id;
-        else console.warn(`⚠️ No Unit for slug ${p.unitId} (progress ${p.id})`);
-      }
-      if (Object.keys(updates).length > 0) {
-        await prisma.exerciseProgress.update({
-          where: { id: p.id },
-          data: updates,
-        });
-      }
-    }
-
-    console.log('✅ Temporary FK migration completed');
+    console.log(
+      `✅ Temporary FK migration completed (assignments: ${assignments}, ` +
+        `progress courses: ${progressCourses}, progress units: ${progressUnits})`,
+    );
   } finally {
     await prisma.$disconnect();
   }
