@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Course, ScreenView, UserProfile } from '../types';
 import { DEMO_STUDENT_HOME, MASCOT_IMAGES } from '../data/mockData';
 
@@ -37,22 +37,29 @@ interface CourseCardModel {
   onClick: () => void;
 }
 
-/** Tarjeta pequeña de estadística (racha, experiencia, cursos). */
-const StatCard: React.FC<{
-  className: string;
+// Courses shown in "Tus Cursos" before pressing "Ver todos".
+const COURSES_PREVIEW = 3;
+
+/**
+ * Color de semáforo según el avance: rojo (0%) → amarillo (50%) → verde (100%).
+ * El tono va cambiando de forma continua a medida que sube el porcentaje.
+ */
+const progressColor = (percent: number, lightness = 42): string => {
+  const p = Math.min(100, Math.max(0, percent));
+  return `hsl(${Math.round(p * 1.2)}, 85%, ${lightness}%)`;
+};
+
+/** Estadística en formato chip, para la barra del saludo (racha, experiencia, cursos). */
+const BannerStat: React.FC<{
   icon: React.ReactNode;
   label: string;
   value: string;
-  note: string;
-}> = ({ className, icon, label, value, note }) => (
-  <div className={`rounded-2xl border px-3 py-3 flex items-center gap-2.5 min-w-0 ${className}`}>
-    <div className="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center shrink-0 text-xl">
-      {icon}
-    </div>
-    <div className="min-w-0">
-      <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">{label}</p>
-      <p className="font-heading font-extrabold text-base text-[#0b1c30] leading-tight whitespace-nowrap">{value}</p>
-      <p className="text-[10px] text-[#737686] truncate">{note}</p>
+}> = ({ icon, label, value }) => (
+  <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-3 py-1.5 min-w-0">
+    <span className="text-xl leading-none flex items-center">{icon}</span>
+    <div className="leading-tight">
+      <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">{label}</p>
+      <p className="font-heading font-extrabold text-sm text-white whitespace-nowrap">{value}</p>
     </div>
   </div>
 );
@@ -76,11 +83,16 @@ const CourseCard: React.FC<{ course: CourseCardModel }> = ({ course }) => (
       <div className="flex items-center gap-2 mt-1">
         <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full"
-            style={{ width: `${course.percent}%`, backgroundColor: course.color }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${course.percent}%`, backgroundColor: progressColor(course.percent) }}
           />
         </div>
-        <span className="text-[11px] font-bold text-[#434655] w-8 text-right">{course.percent}%</span>
+        <span
+          className="text-[11px] font-bold w-8 text-right"
+          style={{ color: progressColor(course.percent, 34) }}
+        >
+          {course.percent}%
+        </span>
       </div>
     </div>
     <span className="material-symbols-outlined text-lg text-slate-400 group-hover:text-[#2563eb] group-hover:translate-x-0.5 transition-all">
@@ -120,21 +132,19 @@ const InfoCard: React.FC<{
 /** Barra de progreso segmentada, versión baja para el curso destacado. */
 const CompactProgress: React.FC<{ percent: number; label: string }> = ({ percent, label }) => {
   const filled = Math.round((percent / 100) * 20);
+  const color = progressColor(percent, 55);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between items-center text-xs font-semibold">
         <span className="text-blue-200">{label}</span>
-        <span className="text-[#ffb95f] font-bold">{percent}%</span>
+        <span className="font-bold" style={{ color: progressColor(percent, 65) }}>{percent}%</span>
       </div>
       <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-1 bg-[#0b1c30]/50 p-1.5 rounded-lg border border-white/15">
         {Array.from({ length: 20 }).map((_, index) => (
           <div
             key={index}
-            className={`h-2.5 rounded-[3px] ${
-              index < filled
-                ? 'bg-[#ffb95f] shadow-[0_0_6px_rgba(255,185,95,0.6)]'
-                : 'bg-white/10 border border-white/5'
-            }`}
+            className={`h-2.5 rounded-[3px] ${index < filled ? '' : 'bg-white/10 border border-white/5'}`}
+            style={index < filled ? { backgroundColor: color, boxShadow: `0 0 6px ${color}` } : undefined}
           />
         ))}
       </div>
@@ -144,9 +154,8 @@ const CompactProgress: React.FC<{ percent: number; label: string }> = ({ percent
 
 /**
  * Vista principal del estudiante, a pantalla completa en escritorio.
- * Tres filas: saludo + estadísticas; curso destacado + cursos; logros,
- * actividad reciente y consejo del día. Las filas 2 y 3 se estiran para
- * ocupar el alto de la ventana (con un tope).
+ * Tres filas: saludo con estadísticas al costado y lamparita del consejo; curso
+ * destacado + cursos; logros y actividad reciente.
  * @param user Perfil del usuario.
  * @param onNavigate Callback para cambiar de vista.
  * @param courses Cursos asignados al estudiante (opcional; sin él se muestra la demo).
@@ -155,6 +164,23 @@ const CompactProgress: React.FC<{ percent: number; label: string }> = ({ percent
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate, courses, onOpenCourse }) => {
   const isDemo = !courses;
   const firstCourse = courses?.[0];
+
+  // Tip of the day: only shown as a floating message when the lightbulb is pressed.
+  const [showTip, setShowTip] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  // "Tus Cursos": only a few are shown until "Ver todos" is pressed.
+  const [showAllCourses, setShowAllCourses] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
+        setShowTip(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // ----- Hero ("Continuar aprendiendo") -----
   let hero: HeroModel | null = null;
@@ -184,7 +210,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
   }
   const heroPrimaryAction = isDemo ? () => onNavigate('exercise') : hero?.onOpen;
 
-  // ----- Courses grid (max. 6) -----
+  // ----- Courses list (a preview first, all of them after "Ver todos") -----
   const courseCards: CourseCardModel[] = isDemo
     ? DEMO_STUDENT_HOME.courses.map((c) => ({
         id: c.id,
@@ -194,7 +220,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         icon: <span>{c.initials}</span>,
         onClick: () => onNavigate('course_roadmap'),
       }))
-    : (courses ?? []).slice(0, 6).map((c) => ({
+    : (courses ?? []).map((c) => ({
         id: c.id,
         title: c.title,
         color: c.color,
@@ -205,8 +231,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         onClick: () => onOpenCourse?.(c),
       }));
 
-  // With enough courses the grid stretches to the height of the featured course.
-  const fillCourses = !!hero && courseCards.length > 4;
+  const hasMoreCourses = courseCards.length > COURSES_PREVIEW;
+  const visibleCourseCards = showAllCourses ? courseCards : courseCards.slice(0, COURSES_PREVIEW);
+
+  // Collapsed: the list stretches to the height of the featured course
+  // (3 rows = COURSES_PREVIEW).
+  const fillCourses = !!hero && !showAllCourses && visibleCourseCards.length === COURSES_PREVIEW;
 
   const courseCount = isDemo ? DEMO_STUDENT_HOME.courses.length : (courses?.length ?? 0);
 
@@ -216,73 +246,81 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-28 md:pb-5 flex-1 flex flex-col gap-4">
-      {/* Row 1: greeting + stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        <div className="lg:col-span-7 min-w-0">
-          <div className="h-full w-full bg-gradient-to-r from-[#0b1c30] via-[#0d223a] to-[#122e4e] px-4 py-3 rounded-2xl border border-white/10 shadow-lg flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                onClick={() => onNavigate('profile')}
-                className="w-11 h-11 rounded-xl overflow-hidden border-2 border-white/20 bg-white/10 shrink-0 shadow-md cursor-pointer hover:border-white/40 transition-colors"
-              >
-                <img src={user.avatarUrl || MASCOT_IMAGES.roundAvatar} alt="Avatar" className="w-full h-full object-cover" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <h1 className="font-heading font-bold text-white leading-tight truncate text-lg xl:text-xl">
-                    {`¡Hola, ${user.name}!`}
-                  </h1>
-                  <span className="hidden sm:inline-block text-[10px] font-bold text-blue-300 uppercase tracking-wider bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 rounded-md shrink-0">
-                    Estudiante
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 truncate">{`${user.school} • ${user.grade || '4to Año'}`}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={() => onNavigate('profile')}
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-100 hover:text-white bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-xl transition-all border border-white/15 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-base">person</span>
-                <span>Ver Perfil</span>
-              </button>
-              <span className="hidden xl:flex items-center gap-1.5 -rotate-6 text-blue-200/80 font-heading font-semibold text-sm">
-                ¡Seguí aprendiendo!
-                <span className="material-symbols-outlined text-xl text-sky-300">rocket_launch</span>
+      {/* Row 1: greeting on the left; stats and the tip lightbulb on the right */}
+      <div className="w-full bg-gradient-to-r from-[#0b1c30] via-[#0d223a] to-[#122e4e] px-4 py-3 rounded-2xl border border-white/10 shadow-lg flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            onClick={() => onNavigate('profile')}
+            className="w-11 h-11 rounded-xl overflow-hidden border-2 border-white/20 bg-white/10 shrink-0 shadow-md cursor-pointer hover:border-white/40 transition-colors"
+          >
+            <img src={user.avatarUrl || MASCOT_IMAGES.roundAvatar} alt="Avatar" className="w-full h-full object-cover" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="font-heading font-bold text-white leading-tight truncate text-lg xl:text-xl">
+                {`¡Hola, ${user.name}!`}
+              </h1>
+              <span className="hidden sm:inline-block text-[10px] font-bold text-blue-300 uppercase tracking-wider bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 rounded-md shrink-0">
+                Estudiante
               </span>
             </div>
+            <p className="text-xs text-slate-300 truncate">{`${user.school} • ${user.grade || '4to Año'}`}</p>
           </div>
         </div>
 
-        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-3 gap-3 min-w-0">
-          <StatCard
-            className="bg-amber-50 border-amber-100"
-            icon="🔥"
-            label="Racha"
-            value={`${user.streakDays} días`}
-            note={user.streakDays > 0 ? '¡Vas muy bien!' : '¡Empezá hoy!'}
-          />
-          <StatCard
-            className="bg-blue-50 border-blue-100"
-            icon={<span className="material-symbols-outlined text-amber-500 text-2xl fill">stars</span>}
-            label="Experiencia"
-            value={`${user.totalXp.toLocaleString()} XP`}
-            note={user.totalXp > 0 ? 'Seguí así' : 'Ganá tu primer XP'}
-          />
-          <StatCard
-            className="bg-emerald-50 border-emerald-100"
-            icon={<span className="material-symbols-outlined text-emerald-600 text-2xl">task_alt</span>}
-            label="Cursos"
-            value={`${courseCount} ${courseCount === 1 ? 'asignado' : 'asignados'}`}
-            note={courseCount > 0 ? 'Continuá aprendiendo' : 'Esperá a que te asignen uno'}
-          />
+        {/* Right side: stats, a divider and the tip lightbulb */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <BannerStat icon="🔥" label="Racha" value={`${user.streakDays} días`} />
+            <BannerStat
+              icon={<span className="material-symbols-outlined text-amber-400 text-xl fill">stars</span>}
+              label="Experiencia"
+              value={`${user.totalXp.toLocaleString()} XP`}
+            />
+            <BannerStat
+              icon={<span className="material-symbols-outlined text-emerald-400 text-xl">task_alt</span>}
+              label="Cursos"
+              value={`${courseCount} ${courseCount === 1 ? 'asignado' : 'asignados'}`}
+            />
+          </div>
+
+          <div className="hidden sm:block w-px h-8 bg-white/15" />
+
+          {/* Lightbulb: opens the tip of the day as a floating message */}
+          <div className="relative" ref={bellRef}>
+            <button
+              onClick={() => setShowTip((open) => !open)}
+              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center justify-center transition-colors cursor-pointer"
+              aria-label="Consejo del día"
+              title="Consejo del día"
+            >
+              <span className="material-symbols-outlined fill text-xl text-amber-400">lightbulb</span>
+            </button>
+
+            {showTip && (
+              <div className="absolute right-0 top-full mt-2 w-72 z-50 bg-amber-50 border border-amber-200 rounded-2xl shadow-xl p-4">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <h2 className="font-heading font-bold text-sm text-[#0b1c30] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined fill text-lg text-amber-500">lightbulb</span>
+                    Consejo del día
+                  </h2>
+                  <button
+                    onClick={() => setShowTip(false)}
+                    className="text-slate-400 hover:text-slate-600 flex items-center cursor-pointer"
+                    aria-label="Cerrar"
+                  >
+                    <span className="material-symbols-outlined text-lg">close</span>
+                  </button>
+                </div>
+                <p className="text-sm text-[#434655] leading-snug">{DEMO_STUDENT_HOME.tip}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Row 2: featured course + course grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch lg:flex-1 lg:max-h-[360px]">
+      
+      {/* Row 2: featured course + course list */}
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 ${showAllCourses ? 'lg:items-start' : 'items-stretch lg:flex-1 lg:max-h-[360px]'}`}>
         {hero && (
           <section className="lg:col-span-7 flex flex-col gap-2 min-w-0">
             <div className="flex items-center justify-between">
@@ -346,24 +384,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         <section className={`${hero ? 'lg:col-span-5' : 'lg:col-span-12'} flex flex-col gap-2 min-w-0`}>
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-[#0b1c30]">Tus Cursos</h2>
-            <button
-              onClick={() => onNavigate('courses_map')}
-              className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
-            >
-              Ver todos <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
+            {hasMoreCourses ? (
+              <button
+                onClick={() => setShowAllCourses((open) => !open)}
+                className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
+              >
+                {showAllCourses ? 'Ver menos' : `Ver todos (${courseCards.length})`}
+                <span className="material-symbols-outlined text-sm">{showAllCourses ? 'expand_less' : 'expand_more'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('courses_map')}
+                className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
+              >
+                Ver catálogo <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            )}
           </div>
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${hero ? '' : 'lg:grid-cols-3 xl:grid-cols-4'} gap-2 ${fillCourses ? 'lg:flex-1 lg:grid-rows-3' : 'content-start'}`}>
-            {courseCards.map((course) => (
+          <div className={`grid grid-cols-1 gap-2 ${fillCourses ? 'lg:flex-1 lg:grid-rows-3' : 'content-start'}`}>
+            {visibleCourseCards.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
           </div>
         </section>
       </div>
 
-      {/* Row 3: achievements, recent activity, tip of the day */}
+      {/* Row 3: achievements and recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch lg:flex-1 lg:max-h-[210px]">
-        <div className="lg:col-span-4 flex">
+        <div className="lg:col-span-6 flex">
           <InfoCard
             icon="emoji_events"
             iconClassName="text-amber-500"
@@ -399,7 +447,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
           </InfoCard>
         </div>
 
-        <div className="lg:col-span-4 flex">
+        <div className="lg:col-span-6 flex">
           <InfoCard
             icon="schedule"
             iconClassName="text-slate-500"
@@ -429,19 +477,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
           </InfoCard>
         </div>
 
-        <div className="lg:col-span-4 flex">
-          <InfoCard
-            icon="lightbulb"
-            iconClassName="text-amber-500"
-            title="Consejo del día"
-            className="bg-amber-50 border-amber-200 w-full"
-          >
-            <div className="flex items-center gap-3">
-              <p className="text-xs xl:text-[13px] text-[#434655] leading-snug flex-1">{DEMO_STUDENT_HOME.tip}</p>
-              <span className="hidden sm:block text-4xl rotate-6 select-none" aria-hidden="true">💡</span>
-            </div>
-          </InfoCard>
-        </div>
       </div>
     </div>
   );
