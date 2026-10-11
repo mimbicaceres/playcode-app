@@ -370,6 +370,125 @@ export async function fetchAdminCourses(token: string): Promise<AdminCourseSumma
   return courses;
 }
 
+// Contenido completo de un curso dinamico para el editor de admin: a
+// diferencia de CourseContent (alumno/docente), este SI expone el
+// expectedOutput de los test cases ocultos (el admin los necesita editar).
+export interface AdminTestCase {
+  id: string;
+  input: string | null;
+  expectedOutput: string;
+  isHidden: boolean;
+}
+
+export interface AdminExercise {
+  id: string;
+  title: string | null;
+  prompt: string | null;
+  starterCode: string | null;
+  rewardXp: number;
+  hint: string | null;
+  testCases: AdminTestCase[];
+}
+
+export interface AdminUnit {
+  id: string;
+  title: string | null;
+  exercises: AdminExercise[];
+}
+
+export interface AdminCourseContent {
+  id: string;
+  title: string | null;
+  description: string | null;
+  units: AdminUnit[];
+}
+
+export async function fetchAdminCourseContent(token: string, courseId: string): Promise<AdminCourseContent> {
+  const { course } = await request<{ course: AdminCourseContent }>(`/admin/courses/${courseId}`, {
+    headers: authHeaders(token),
+  });
+  return course;
+}
+
+export interface CreateCourseInput {
+  title: string;
+  description?: string;
+}
+
+export async function createCourseRequest(token: string, data: CreateCourseInput) {
+  const { course } = await request<{ course: { id: string } }>('/admin/courses', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return course;
+}
+
+export async function updateCourseRequest(token: string, courseId: string, data: Partial<CreateCourseInput>) {
+  const { course } = await request<{ course: { id: string } }>(`/admin/courses/${courseId}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return course;
+}
+
+export async function createUnitRequest(token: string, courseId: string, title: string): Promise<AdminUnit> {
+  const { unit } = await request<{ unit: AdminUnit }>(`/admin/courses/${courseId}/units`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ title }),
+  });
+  return unit;
+}
+
+export async function updateUnitRequest(token: string, unitId: string, title: string): Promise<AdminUnit> {
+  const { unit } = await request<{ unit: AdminUnit }>(`/admin/courses/units/${unitId}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ title }),
+  });
+  return unit;
+}
+
+export interface ExerciseFormInput {
+  title: string;
+  prompt: string;
+  starterCode: string;
+  rewardXp: number;
+  hint?: string;
+  testCases: { input?: string; expectedOutput: string; isHidden?: boolean }[];
+}
+
+export async function createExerciseRequest(token: string, unitId: string, data: ExerciseFormInput): Promise<AdminExercise> {
+  const { exercise } = await request<{ exercise: AdminExercise }>(`/admin/courses/units/${unitId}/exercises`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return exercise;
+}
+
+export async function updateExerciseRequest(
+  token: string,
+  exerciseId: string,
+  data: Partial<ExerciseFormInput>,
+): Promise<AdminExercise> {
+  const { exercise } = await request<{ exercise: AdminExercise }>(`/admin/courses/exercises/${exerciseId}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return exercise;
+}
+
+export async function deleteExerciseRequest(token: string, exerciseId: string): Promise<void> {
+  await request<void>(`/admin/courses/exercises/${exerciseId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
 export async function fetchCourseContent(token: string, courseId: string): Promise<CourseContent> {
   const { course } = await request<{ course: CourseContent }>(`/courses/${courseId}/content`, {
     headers: { Authorization: `Bearer ${token}` },

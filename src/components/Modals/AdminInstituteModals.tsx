@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminInstituteCourseRow, AdminInstituteUserRow } from '../../types';
-import type { UserEditData } from '../../auth/api';
+import type { AdminCourseContent, AdminExercise, ExerciseFormInput, UserEditData } from '../../auth/api';
 
 // Modals of the admin panel actions (real /admin and /demo/admin). They only
 // collect the data: saving is done by the caller (backend or demo state).
@@ -74,6 +74,20 @@ function useSave(onClose: () => void) {
   };
   return { busy, error, setError, run };
 }
+
+const SmallAction: React.FC<{ icon: string; title: string; onClick: () => void; danger?: boolean }> = ({ icon, title, onClick, danger }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={title}
+    title={title}
+    className={`p-1 rounded-lg transition-colors cursor-pointer ${
+      danger ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+    }`}
+  >
+    <span className="material-symbols-outlined text-base">{icon}</span>
+  </button>
+);
 
 const courseNames = (ids: string[], courses: AdminInstituteCourseRow[]) =>
   ids.map((id) => courses.find((c) => c.id === id)?.name ?? id);
@@ -398,6 +412,323 @@ export const CourseAssignModal: React.FC<{
         <ErrorBox message={error} />
         <Footer onCancel={onClose} submitLabel="Guardar asignación" busyLabel="Guardando..." busy={busy} disabled={changes.length === 0} />
       </form>
+    </ModalShell>
+  );
+};
+
+// ─── Crear curso (Fase B: contenido dinamico) ───────────────────────────────
+export const CreateCourseModal: React.FC<{
+  onSave: (data: { title: string; description?: string }) => SaveResult;
+  onClose: () => void;
+}> = ({ onSave, onClose }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const { busy, error, setError, run } = useSave(onClose);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('El título es obligatorio.');
+      return;
+    }
+    run(() => onSave({ title: title.trim(), description: description.trim() || undefined }));
+  };
+
+  return (
+    <ModalShell title="Crear curso" subtitle="Después vas a poder agregar unidades y ejercicios" onClose={onClose}>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-[#434655]" htmlFor="course-title">Título</label>
+          <input id="course-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLASSES} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-[#434655]" htmlFor="course-description">Descripción (opcional)</label>
+          <textarea
+            id="course-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className={`${INPUT_CLASSES} h-auto py-2`}
+          />
+        </div>
+        <ErrorBox message={error} />
+        <Footer onCancel={onClose} submitLabel="Crear curso" busyLabel="Creando..." busy={busy} />
+      </form>
+    </ModalShell>
+  );
+};
+
+// ─── Crear / editar ejercicio ───────────────────────────────────────────────
+interface ExerciseTestCaseForm {
+  input: string;
+  expectedOutput: string;
+  isHidden: boolean;
+}
+
+const emptyTestCase = (): ExerciseTestCaseForm => ({ input: '', expectedOutput: '', isHidden: false });
+
+export const ExerciseFormModal: React.FC<{
+  exercise?: AdminExercise;
+  onSave: (data: ExerciseFormInput) => SaveResult;
+  onClose: () => void;
+}> = ({ exercise, onSave, onClose }) => {
+  const [title, setTitle] = useState(exercise?.title ?? '');
+  const [prompt, setPrompt] = useState(exercise?.prompt ?? '');
+  const [starterCode, setStarterCode] = useState(exercise?.starterCode ?? '');
+  const [rewardXp, setRewardXp] = useState(exercise?.rewardXp ?? 10);
+  const [hint, setHint] = useState(exercise?.hint ?? '');
+  const [testCases, setTestCases] = useState<ExerciseTestCaseForm[]>(
+    exercise && exercise.testCases.length
+      ? exercise.testCases.map((tc) => ({ input: tc.input ?? '', expectedOutput: tc.expectedOutput, isHidden: tc.isHidden }))
+      : [emptyTestCase()],
+  );
+  const { busy, error, setError, run } = useSave(onClose);
+
+  const updateTestCase = (index: number, patch: Partial<ExerciseTestCaseForm>) =>
+    setTestCases((prev) => prev.map((tc, i) => (i === index ? { ...tc, ...patch } : tc)));
+  const addTestCase = () => setTestCases((prev) => [...prev, emptyTestCase()]);
+  const removeTestCase = (index: number) => setTestCases((prev) => prev.filter((_, i) => i !== index));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !prompt.trim()) {
+      setError('Completá el título y la consigna.');
+      return;
+    }
+    if (testCases.length === 0 || testCases.some((tc) => !tc.expectedOutput.trim())) {
+      setError('Agregá al menos un caso de prueba con salida esperada.');
+      return;
+    }
+    run(() => onSave({
+      title: title.trim(),
+      prompt: prompt.trim(),
+      starterCode,
+      rewardXp,
+      hint: hint.trim() || undefined,
+      testCases: testCases.map((tc) => ({ input: tc.input, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden })),
+    }));
+  };
+
+  return (
+    <ModalShell title={exercise ? 'Editar ejercicio' : 'Nuevo ejercicio'} subtitle="Ejercicio de código (Python)" onClose={onClose} wide>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-title">Título</label>
+          <input id="ex-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLASSES} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-prompt">Consigna</label>
+          <textarea id="ex-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className={`${INPUT_CLASSES} h-auto py-2`} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-starter">Código inicial</label>
+          <textarea
+            id="ex-starter"
+            value={starterCode}
+            onChange={(e) => setStarterCode(e.target.value)}
+            rows={4}
+            className={`${INPUT_CLASSES} h-auto py-2 font-mono`}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-xp">XP</label>
+            <input
+              id="ex-xp"
+              type="number"
+              min={0}
+              value={rewardXp}
+              onChange={(e) => setRewardXp(Number(e.target.value))}
+              className={INPUT_CLASSES}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-hint">Pista (opcional)</label>
+            <input id="ex-hint" type="text" value={hint} onChange={(e) => setHint(e.target.value)} className={INPUT_CLASSES} />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-semibold text-[#434655]">Casos de prueba</span>
+            <button
+              type="button"
+              onClick={addTestCase}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">add</span> Agregar caso
+            </button>
+          </div>
+          {testCases.map((tc, index) => (
+            <div key={index} className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Entrada (input, opcional)</label>
+                  <textarea
+                    value={tc.input}
+                    onChange={(e) => updateTestCase(index, { input: e.target.value })}
+                    rows={2}
+                    className={`${INPUT_CLASSES} h-auto py-1.5 font-mono text-xs`}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-slate-500">Salida esperada</label>
+                  <textarea
+                    value={tc.expectedOutput}
+                    onChange={(e) => updateTestCase(index, { expectedOutput: e.target.value })}
+                    rows={2}
+                    className={`${INPUT_CLASSES} h-auto py-1.5 font-mono text-xs`}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tc.isHidden}
+                    onChange={(e) => updateTestCase(index, { isHidden: e.target.checked })}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                  Oculto (no se muestra como ejemplo al alumno)
+                </label>
+                {testCases.length > 1 && (
+                  <button type="button" onClick={() => removeTestCase(index)} className="text-xs text-red-600 hover:text-red-700 cursor-pointer">
+                    Quitar
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <ErrorBox message={error} />
+        <Footer onCancel={onClose} submitLabel={exercise ? 'Guardar cambios' : 'Crear ejercicio'} busyLabel="Guardando..." busy={busy} />
+      </form>
+    </ModalShell>
+  );
+};
+
+// ─── Gestionar contenido de un curso dinámico (unidades + ejercicios) ───────
+export const ManageCourseContentModal: React.FC<{
+  courseId: string;
+  courseName: string;
+  fetchContent: (courseId: string) => Promise<AdminCourseContent>;
+  onCreateUnit: (courseId: string, title: string) => SaveResult;
+  onCreateExercise: (unitId: string, data: ExerciseFormInput) => SaveResult;
+  onUpdateExercise: (exerciseId: string, data: ExerciseFormInput) => SaveResult;
+  onDeleteExercise: (exerciseId: string) => SaveResult;
+  onClose: () => void;
+}> = ({ courseId, courseName, fetchContent, onCreateUnit, onCreateExercise, onUpdateExercise, onDeleteExercise, onClose }) => {
+  const [content, setContent] = useState<AdminCourseContent | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [newUnitTitle, setNewUnitTitle] = useState('');
+  const [addingUnit, setAddingUnit] = useState(false);
+  const [exerciseModal, setExerciseModal] = useState<{ unitId: string; exercise?: AdminExercise } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const reload = () => {
+    fetchContent(courseId)
+      .then((c) => { setContent(c); setLoadError(false); })
+      .catch(() => setLoadError(true));
+  };
+  useEffect(reload, [courseId]);
+
+  const handleAddUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUnitTitle.trim()) return;
+    setAddingUnit(true);
+    const error = await onCreateUnit(courseId, newUnitTitle.trim());
+    setAddingUnit(false);
+    if (error) {
+      setActionError(error);
+      return;
+    }
+    setNewUnitTitle('');
+    reload();
+  };
+
+  const handleDeleteExercise = async (exerciseId: string) => {
+    if (!window.confirm('¿Eliminar este ejercicio? Esta acción no se puede deshacer.')) return;
+    const error = await onDeleteExercise(exerciseId);
+    if (error) setActionError(error);
+    else reload();
+  };
+
+  return (
+    <ModalShell title={courseName} subtitle="Unidades y ejercicios de este curso" onClose={onClose} wide>
+      <div className="flex flex-col gap-4">
+        <ErrorBox message={actionError} />
+        {!content && !loadError && <p className="text-sm text-slate-500 py-6 text-center">Cargando...</p>}
+        {loadError && <ErrorBox message="No se pudo cargar el contenido del curso." />}
+        {content && content.units.length === 0 && (
+          <p className="text-xs text-slate-400 text-center py-4">Todavía no tiene unidades. Agregá la primera abajo.</p>
+        )}
+        {content && content.units.map((unit) => (
+          <section key={unit.id} className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <h4 className="font-semibold text-sm text-[#0b1c30]">{unit.title}</h4>
+              <button
+                type="button"
+                onClick={() => setExerciseModal({ unitId: unit.id })}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">add</span> Agregar ejercicio
+              </button>
+            </div>
+            {unit.exercises.length === 0 ? (
+              <p className="text-xs text-slate-400">Todavía no tiene ejercicios.</p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {unit.exercises.map((ex) => (
+                  <li key={ex.id} className="flex justify-between items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-sm text-[#0b1c30] truncate">{ex.title}</span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] text-slate-500 whitespace-nowrap">{ex.testCases.length} casos · {ex.rewardXp} XP</span>
+                      <SmallAction icon="edit" title="Editar" onClick={() => setExerciseModal({ unitId: unit.id, exercise: ex })} />
+                      <SmallAction icon="delete" title="Eliminar" danger onClick={() => handleDeleteExercise(ex.id)} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+
+        <form onSubmit={handleAddUnit} className="flex gap-2 items-end pt-2 border-t border-slate-100">
+          <div className="flex-1 flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#434655]" htmlFor="new-unit-title">Nueva unidad</label>
+            <input
+              id="new-unit-title"
+              type="text"
+              value={newUnitTitle}
+              onChange={(e) => setNewUnitTitle(e.target.value)}
+              placeholder="Título de la unidad"
+              className={INPUT_CLASSES}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={addingUnit || !newUnitTitle.trim()}
+            className="btn-game-primary px-4 py-2.5 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {addingUnit ? 'Agregando...' : 'Agregar unidad'}
+          </button>
+        </form>
+      </div>
+
+      {exerciseModal && (
+        <ExerciseFormModal
+          exercise={exerciseModal.exercise}
+          onClose={() => setExerciseModal(null)}
+          onSave={(data) => (exerciseModal.exercise
+            ? onUpdateExercise(exerciseModal.exercise.id, data)
+            : onCreateExercise(exerciseModal.unitId, data)
+          ).then((saveError) => {
+            if (!saveError) reload();
+            return saveError;
+          })}
+        />
+      )}
     </ModalShell>
   );
 };

@@ -256,8 +256,11 @@ export interface AdminInstituteCourseRow {
   unitsCount: number;
   activitiesCount: number;
   status: 'Activo' | 'Inactivo';
-  // Content of the course (predefined by CODIX), shown by "Ver curso".
+  // Content of the course (predefined by CODIX, or dynamic from the DB), shown by "Ver curso".
   units: { title: string; activities: number }[];
+  // Cursos reales (DB), a diferencia de los predefinidos por CODIX: estos
+  // se pueden crear/editar desde "Gestionar contenido".
+  isDynamic?: boolean;
 }
 
 export interface AdminInstituteActivityRow {

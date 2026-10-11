@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { AdminInstituteData, UserRole } from '../types';
-import type { UserEditData } from '../auth/api';
+import type { AdminCourseContent, ExerciseFormInput, UserEditData } from '../auth/api';
 import { StatusHud } from './ui/StatusHud';
 import {
-  AssignCoursesModal, CourseAssignModal, CourseDetailModal, EditUserModal, ToggleActiveModal, UserProfileModal,
+  AssignCoursesModal, CourseAssignModal, CourseDetailModal, CreateCourseModal, EditUserModal,
+  ManageCourseContentModal, ToggleActiveModal, UserProfileModal,
 } from './Modals/AdminInstituteModals';
 
 // Admin actions. The real panel saves them in the backend; the demo saves them
@@ -14,6 +15,13 @@ export interface AdminInstituteActions {
   updateUser: (userId: string, data: UserEditData) => Promise<string | null>;
   setUserActive: (userId: string, isActive: boolean) => Promise<string | null>;
   setUserCourses: (userId: string, courseIds: string[]) => Promise<string | null>;
+  // Fase B: contenido de cursos dinamicos (creados en la propia plataforma).
+  createCourse?: (data: { title: string; description?: string }) => Promise<string | null>;
+  fetchCourseContent?: (courseId: string) => Promise<AdminCourseContent>;
+  createUnit?: (courseId: string, title: string) => Promise<string | null>;
+  createExercise?: (unitId: string, data: ExerciseFormInput) => Promise<string | null>;
+  updateExercise?: (exerciseId: string, data: ExerciseFormInput) => Promise<string | null>;
+  deleteExercise?: (exerciseId: string) => Promise<string | null>;
 }
 
 interface AdminInstituteViewProps {
@@ -38,7 +46,9 @@ const SOON = 'Disponible próximamente';
 type OpenModal =
   | { type: 'profile' | 'edit' | 'courses' | 'status'; userId: string }
   | { type: 'course'; courseId: string }
-  | { type: 'assign'; courseId?: string };
+  | { type: 'assign'; courseId?: string }
+  | { type: 'createCourse' }
+  | { type: 'manageCourse'; courseId: string };
 
 const TABS: { id: AdminTab; icon: string; label: string }[] = [
   { id: 'users', icon: 'manage_accounts', label: 'Usuarios' },
@@ -316,15 +326,26 @@ const stats = [
           <div className="p-3.5 md:p-4 border-b border-slate-200 flex justify-between items-center gap-3 bg-slate-50/50">
             <div>
               <h2 className="font-heading font-bold text-base text-[#0b1c30]">Cursos disponibles</h2>
-              <p className="text-[11px] text-slate-500">Cursos de CODIX: asignalos a docentes y alumnos del instituto</p>
+              <p className="text-[11px] text-slate-500">Cursos de CODIX y cursos propios: asignalos a docentes y alumnos del instituto</p>
             </div>
-            <button
-              onClick={() => setModal({ type: 'assign' })}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"
-            >
-              <span className="material-symbols-outlined text-base">playlist_add</span>
-              <span>Asignar curso</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {actions.createCourse && (
+                <button
+                  onClick={() => setModal({ type: 'createCourse' })}
+                  className="bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-base">add</span>
+                  <span>Crear curso</span>
+                </button>
+              )}
+              <button
+                onClick={() => setModal({ type: 'assign' })}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-base">playlist_add</span>
+                <span>Asignar curso</span>
+              </button>
+            </div>
           </div>
           {data.courses.length === 0 ? (
             <EmptyCard icon="menu_book" text="Todavía no hay cursos disponibles." detail="Los cursos, unidades y actividades los provee CODIX. Cuando estén disponibles, vas a poder asignarlos a docentes y alumnos desde acá." />
@@ -353,6 +374,9 @@ const stats = [
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                     <RowAction icon="visibility" title="Ver curso" onClick={() => setModal({ type: 'course', courseId: course.id })} />
+                    {course.isDynamic && actions.fetchCourseContent && (
+                      <RowAction icon="edit_note" title="Gestionar contenido" onClick={() => setModal({ type: 'manageCourse', courseId: course.id })} />
+                    )}
                     <RowAction icon="playlist_add" title="Asignar curso" onClick={() => setModal({ type: 'assign', courseId: course.id })} />
                   </div>
                 </div>
@@ -551,6 +575,25 @@ const stats = [
             }
             return null;
           })}
+        />
+      )}
+      {modal?.type === 'createCourse' && actions.createCourse && (
+        <CreateCourseModal
+          onClose={closeModal}
+          onSave={(data) => withNotice('Curso creado.', () => actions.createCourse!(data))}
+        />
+      )}
+      {modal?.type === 'manageCourse' && actions.fetchCourseContent && actions.createUnit && actions.createExercise
+        && actions.updateExercise && actions.deleteExercise && (
+        <ManageCourseContentModal
+          courseId={modal.courseId}
+          courseName={data.courses.find((c) => c.id === modal.courseId)?.name ?? 'Curso'}
+          fetchContent={actions.fetchCourseContent}
+          onCreateUnit={actions.createUnit}
+          onCreateExercise={actions.createExercise}
+          onUpdateExercise={actions.updateExercise}
+          onDeleteExercise={actions.deleteExercise}
+          onClose={closeModal}
         />
       )}
     </div>

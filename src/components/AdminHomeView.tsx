@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AdminCourseSummary, ApiError, ApiUser, fetchAdminCourses, fetchUsers, getStoredToken, setUserActiveRequest,
-  setUserCoursesRequest, updateUserRequest,
+  AdminCourseSummary, ApiError, ApiUser, createCourseRequest, createExerciseRequest, createUnitRequest,
+  deleteExerciseRequest, fetchAdminCourseContent, fetchAdminCourses, fetchUsers, getStoredToken, setUserActiveRequest,
+  setUserCoursesRequest, updateExerciseRequest, updateUserRequest,
 } from '../auth/api';
 import { buildAdminInstituteData } from '../data/realAdminData';
 import { AdminInstituteActions, AdminInstituteView } from './AdminInstituteView';
@@ -61,12 +62,15 @@ const loadUsers = () => {
   /** Ejecuta loadUsers una sola vez al montar el componente. */
 useEffect(loadUsers, []);
 
-  /** Carga los cursos reales (dinamicos) una sola vez al montar el componente. */
-  useEffect(() => {
+  /** Carga los cursos reales (dinamicos) desde el backend. */
+  const loadCourses = () => {
     const token = getStoredToken();
     if (!token) return;
     fetchAdminCourses(token).then(setDbCourses).catch(() => setDbCourses([]));
-  }, []);
+  };
+
+  /** Ejecuta loadCourses una sola vez al montar el componente. */
+  useEffect(loadCourses, []);
 
   const data = useMemo(() => buildAdminInstituteData(users ?? [], dbCourses), [users, dbCourses]);
 
@@ -100,12 +104,37 @@ const saveUser = async (send: (token: string) => Promise<{ user: ApiUser }>): Pr
     }
   };
 
+  // Fase B: contenido de cursos dinamicos (creados en la propia plataforma).
+  // Siempre refrescan la lista de cursos para que las tarjetas del admin
+  // muestren los conteos de unidades/actividades actualizados.
+  const runCourseAction = async (send: (token: string) => Promise<unknown>): Promise<string | null> => {
+    const token = getStoredToken();
+    if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
+    try {
+      await send(token);
+      loadCourses();
+      return null;
+    } catch (error) {
+      return actionError(error);
+    }
+  };
+
   /** Acciónes disponibles para la vista de gestión de instituciones. */
 const actions: AdminInstituteActions = {
     createTeacher: () => setIsCreateTeacherOpen(true),
     updateUser: (id, values) => saveUser((token) => updateUserRequest(token, id, values)),
     setUserActive: (id, isActive) => saveUser((token) => setUserActiveRequest(token, id, isActive)),
     setUserCourses: (id, courseIds) => saveUser((token) => setUserCoursesRequest(token, id, courseIds)),
+    createCourse: (courseData) => runCourseAction((token) => createCourseRequest(token, courseData)),
+    fetchCourseContent: (courseId) => {
+      const token = getStoredToken();
+      if (!token) return Promise.reject(new Error('Tu sesión expiró. Volvé a iniciar sesión.'));
+      return fetchAdminCourseContent(token, courseId);
+    },
+    createUnit: (courseId, title) => runCourseAction((token) => createUnitRequest(token, courseId, title)),
+    createExercise: (unitId, exerciseData) => runCourseAction((token) => createExerciseRequest(token, unitId, exerciseData)),
+    updateExercise: (exerciseId, exerciseData) => runCourseAction((token) => updateExerciseRequest(token, exerciseId, exerciseData)),
+    deleteExercise: (exerciseId) => runCourseAction((token) => deleteExerciseRequest(token, exerciseId)),
   };
 
   /** Banner que muestra el mensaje de éxito cuando successMessage tiene valor. */

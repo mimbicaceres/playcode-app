@@ -73,6 +73,7 @@ export function buildAdminInstituteData(users: ApiUser[], dbCourses: AdminCourse
           activitiesCount: course.activitiesCount,
           status: statusFor(activeDbCourses.includes(course)),
           units: course.units,
+          isDynamic: true,
         };
       }),
     ],
