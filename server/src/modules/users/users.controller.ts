@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { toPublicUser, withCourses } from "../../lib/users";
-import { isCodixCourseId } from "../../lib/codixCourses";
+import { isAssignableCourseId } from "../../lib/codixCourses";
 import { createTeacher, EmailAlreadyRegisteredError } from "../auth/auth.service";
 import { isValidEmail, normalizeEmail, validateNewUserInput } from "../auth/auth.validation";
 import { getUserProgressByCourse } from "../progress/progress.service";
@@ -204,8 +204,12 @@ export async function getStudentProgressByCourse(req: Request, res: Response): P
 export async function setUserCourses(req: Request, res: Response): Promise<Response> {
   const { courseIds } = (req.body ?? {}) as Record<string, unknown>;
 
-  if (!Array.isArray(courseIds) || !courseIds.every(isCodixCourseId)) {
-    return res.status(400).json({ error: "courseIds must be a list of CODIX course ids" });
+  if (!Array.isArray(courseIds)) {
+    return res.status(400).json({ error: "courseIds must be an array" });
+  }
+  const validFlags = await Promise.all(courseIds.map((id) => isAssignableCourseId(id)));
+  if (!validFlags.every(Boolean)) {
+    return res.status(400).json({ error: "courseIds must be a list of assignable course ids" });
   }
   const uniqueIds = [...new Set(courseIds as string[])];
 

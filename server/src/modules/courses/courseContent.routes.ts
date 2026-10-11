@@ -1,9 +1,41 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth } from '../../middleware/auth';
+import { requireAuth, requireRole } from '../../middleware/auth';
 import { prisma } from '../../lib/prisma';
 import { getCourseContent } from './courseContent.service';
 
 const router = Router();
+
+// Listado de cursos reales (dinamicos) para el panel de admin: solo los que
+// ya tienen contenido real cargado (unidades con ejercicios), para no
+// mezclar con las filas "cascaron" de los cursos viejos del catalogo CODIX.
+router.get('/', requireAuth, requireRole('admin', 'teacher'), async (_req: Request, res: Response) => {
+  try {
+    const courses = await prisma.course.findMany({
+      include: {
+        units: {
+          orderBy: { order: 'asc' },
+          include: { exercises: { select: { id: true } } },
+        },
+      },
+    });
+
+    const result = courses
+      .filter((course) => course.units.some((unit) => unit.exercises.length > 0))
+      .map((course) => ({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        unitsCount: course.units.length,
+        activitiesCount: course.units.reduce((sum, unit) => sum + unit.exercises.length, 0),
+        units: course.units.map((unit) => ({ title: unit.title ?? '', activities: unit.exercises.length })),
+      }));
+
+    return res.status(200).json({ courses: result });
+  } catch (error) {
+    console.error('listCourses error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Contenido real de un curso (unidades/ejercicios en orden, con el status
 // de avance calculado para quien pide). Alumno y docente necesitan tener el

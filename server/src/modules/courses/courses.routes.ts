@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from '../../middleware/auth';
 import { getUserCourses } from './courses.service';
 import { prisma } from '../../lib/prisma';
 import { withCourses, toPublicUser } from '../../lib/users';
-import { isCodixCourseId } from '../../lib/codixCourses';
+import { isAssignableCourseId } from '../../lib/codixCourses';
 import { Prisma } from '@prisma/client';
 
 const router = Router();
@@ -25,7 +25,7 @@ router.post('/assign', requireAuth, requireRole('admin', 'teacher'), async (req:
   if (!studentId || !courseId) {
     return res.status(400).json({ error: 'studentId and courseId are required' });
   }
-  if (!isCodixCourseId(courseId)) {
+  if (!(await isAssignableCourseId(courseId))) {
     return res.status(400).json({ error: 'Invalid courseId' });
   }
   const requesterId = req.auth!.userId;

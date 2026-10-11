@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ApiError, ApiUser, fetchUsers, getStoredToken, setUserActiveRequest, setUserCoursesRequest, updateUserRequest,
+  AdminCourseSummary, ApiError, ApiUser, fetchAdminCourses, fetchUsers, getStoredToken, setUserActiveRequest,
+  setUserCoursesRequest, updateUserRequest,
 } from '../auth/api';
 import { buildAdminInstituteData } from '../data/realAdminData';
 import { AdminInstituteActions, AdminInstituteView } from './AdminInstituteView';
@@ -34,6 +35,8 @@ export const AdminHomeView: React.FC<{ currentUserId: string; onViewStudentProgr
 const [users, setUsers] = useState<ApiUser[] | null>(null);
   /** Indica si ocurrió un error al cargar los usuarios. */
 const [loadError, setLoadError] = useState(false);
+  /** Cursos reales (dinamicos) disponibles para asignar, ademas del catalogo CODIX. */
+  const [dbCourses, setDbCourses] = useState<AdminCourseSummary[]>([]);
   /** Controla la visibilidad del modal para crear docentes. */
 const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
   /** Mensaje de éxito que se muestra temporalmente al crear o actualizar datos. */
@@ -58,7 +61,14 @@ const loadUsers = () => {
   /** Ejecuta loadUsers una sola vez al montar el componente. */
 useEffect(loadUsers, []);
 
-  const data = useMemo(() => buildAdminInstituteData(users ?? []), [users]);
+  /** Carga los cursos reales (dinamicos) una sola vez al montar el componente. */
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    fetchAdminCourses(token).then(setDbCourses).catch(() => setDbCourses([]));
+  }, []);
+
+  const data = useMemo(() => buildAdminInstituteData(users ?? [], dbCourses), [users, dbCourses]);
 
   /**
  * Callback invocado cuando se crea un nuevo docente.

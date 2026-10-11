@@ -353,6 +353,23 @@ export interface CourseContent {
   }[];
 }
 
+// Cursos reales (dinamicos) para el panel de admin, con contenido ya cargado.
+export interface AdminCourseSummary {
+  id: string;
+  title: string | null;
+  description: string | null;
+  unitsCount: number;
+  activitiesCount: number;
+  units: { title: string; activities: number }[];
+}
+
+export async function fetchAdminCourses(token: string): Promise<AdminCourseSummary[]> {
+  const { courses } = await request<{ courses: AdminCourseSummary[] }>('/courses', {
+    headers: authHeaders(token),
+  });
+  return courses;
+}
+
 export async function fetchCourseContent(token: string, courseId: string): Promise<CourseContent> {
   const { course } = await request<{ course: CourseContent }>(`/courses/${courseId}/content`, {
     headers: { Authorization: `Bearer ${token}` },
