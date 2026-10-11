@@ -3,6 +3,7 @@ import express, { Express, NextFunction, Request, Response } from "express";
 import authRoutes from "./modules/auth/auth.routes";
 import usersRoutes from "./modules/users/users.routes";
 import coursesRoutes from "./modules/courses/courses.routes";
+import courseContentRoutes from "./modules/courses/courseContent.routes";
 import progressRoutes from "./modules/progress/progress.routes";
 import exercisesRoutes from "./modules/exercises/exercises.routes";
 
@@ -27,6 +28,7 @@ export function createApp(): Express {
 app.use("/api/users/me", coursesRoutes);
 app.use("/api/users/me/progress", progressRoutes);
   app.use("/api/exercises", exercisesRoutes);
+  app.use("/api/courses", courseContentRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Ruta no encontrada" });

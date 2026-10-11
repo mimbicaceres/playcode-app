@@ -33,6 +33,14 @@ export interface UserProfile {
   assignedCourseIds: string[];
 }
 
+export interface ExerciseTestCase {
+  id: string;
+  input: string | null;
+  isHidden: boolean;
+  // Nunca viene presente cuando isHidden es true.
+  expectedOutput?: string;
+}
+
 export interface Exercise {
   id: string;
   unitId: string;
@@ -47,6 +55,12 @@ export interface Exercise {
   rewardXp: number;
   status: 'completed' | 'active' | 'locked';
   codeLanguage: string;
+  // Presentes solo en ejercicios reales (type = 'code_runner'), cargados
+  // desde la base de datos en vez del catalogo estatico.
+  type?: 'fill_variable' | 'code_runner';
+  prompt?: string;
+  starterCode?: string;
+  testCases?: ExerciseTestCase[];
 }
 
 export interface Unit {

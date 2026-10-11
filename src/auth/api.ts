@@ -323,6 +323,43 @@ export async function submitCodeExercise(
   });
 }
 
+// Contenido real de un curso dinamico (unidades/ejercicios en orden, con el
+// status de avance ya calculado por el backend para el usuario autenticado).
+export interface CourseContent {
+  id: string;
+  slug: string;
+  title: string | null;
+  description: string | null;
+  progressPercent: number;
+  units: {
+    id: string;
+    slug: string;
+    title: string | null;
+    order: number;
+    exercises: {
+      id: string;
+      slug: string | null;
+      title: string | null;
+      type: 'fill_variable' | 'code_runner';
+      order: number;
+      prompt: string | null;
+      starterCode: string | null;
+      language: string;
+      rewardXp: number;
+      hint: string | null;
+      status: 'completed' | 'active' | 'locked';
+      testCases: { id: string; input: string | null; isHidden: boolean; expectedOutput?: string }[];
+    }[];
+  }[];
+}
+
+export async function fetchCourseContent(token: string, courseId: string): Promise<CourseContent> {
+  const { course } = await request<{ course: CourseContent }>(`/courses/${courseId}/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return course;
+}
+
 // Fetch student progress from backend
 export interface UserProgress {
   totalXp: number;
