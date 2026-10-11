@@ -13,6 +13,11 @@ enum UserRole {
   admin
 }
 
+enum ExerciseType {
+  fill_variable
+  code_runner
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -49,6 +54,7 @@ model Unit {
   id        String   @id @default(uuid())
   slug      String   @unique
   title     String?
+  order     Int      @default(0)
   course    Course   @relation(fields: [courseId], references: [id])
   courseId  String
   exercises Exercise[]
@@ -57,11 +63,34 @@ model Unit {
 }
 
 model Exercise {
-  id      String   @id @default(uuid())
-  slug    String?
-  title   String?
-  unit    Unit     @relation(fields: [unitId], references: [id])
-  unitId  String
+  id          String       @id @default(uuid())
+  slug        String?
+  title       String?
+  type        ExerciseType @default(fill_variable)
+  order       Int          @default(0)
+  // Consigna del ejercicio (solo para type = code_runner).
+  prompt      String?
+  starterCode String?
+  language    String       @default("python")
+  rewardXp    Int          @default(0)
+  hint        String?
+  unit        Unit         @relation(fields: [unitId], references: [id])
+  unitId      String
+  testCases   TestCase[]
+}
+
+model TestCase {
+  id             String   @id @default(uuid())
+  exercise       Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  exerciseId     String
+  order          Int      @default(0)
+  // stdin que recibe el programa del alumno.
+  input          String?
+  expectedOutput String
+  // Casos ocultos: se usan para corregir pero nunca se muestran al alumno.
+  isHidden       Boolean  @default(false)
+
+  @@index([exerciseId])
 }
 
 // Course of the CODIX catalog assigned by an admin to a student or a teacher.
