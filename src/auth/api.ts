@@ -360,6 +360,40 @@ export async function fetchCourseContent(token: string, courseId: string): Promi
   return course;
 }
 
+// Progreso real agrupado por curso (solo cursos dinamicos con contenido
+// real migrado — los cursos del catalogo estatico no aparecen acá).
+export interface CourseProgressSummary {
+  courseId: string;
+  courseName: string | null;
+  completedExercises: number;
+  totalExercises: number;
+  progressPercent: number;
+  xpEarned: number;
+  units: {
+    unitId: string;
+    unitName: string | null;
+    completedExercises: number;
+    totalExercises: number;
+    percent: number;
+  }[];
+}
+
+export async function fetchMyProgressByCourse(token: string): Promise<CourseProgressSummary[]> {
+  const { progress } = await request<{ progress: CourseProgressSummary[] }>('/users/me/progress/by-course', {
+    headers: authHeaders(token),
+  });
+  return progress;
+}
+
+// Docente/admin: progreso real de un alumno puntual (solo lectura).
+export async function fetchStudentProgressByCourse(token: string, studentId: string): Promise<CourseProgressSummary[]> {
+  const { progress } = await request<{ progress: CourseProgressSummary[] }>(
+    `/users/${studentId}/progress-by-course`,
+    { headers: authHeaders(token) },
+  );
+  return progress;
+}
+
 // Fetch student progress from backend
 export interface UserProgress {
   totalXp: number;

@@ -4,14 +4,15 @@ import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord } from './ty
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchMe, fetchMyCourses, fetchTeaching, getStoredToken, loginRequest, registerRequest,
+  ApiError, CourseProgressSummary, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchMe, fetchMyCourses,
+  fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest, registerRequest,
   storeToken, toUserProfile,
 } from './auth/api';
 import { BADGES, COURSES_DATA, DEMO_REPORTS, INITIAL_USER, MASCOT_IMAGES } from './data/mockData';
 import { buildDemoInstitute, initialDemoInstituteState } from './data/demoInstitute';
 import { catalogCoursesFor } from './data/codixCatalog';
 import { splitCourseIds, toFrontendCourse } from './data/dynamicCourses';
-import { buildTeacherCourses, EMPTY_REPORTS } from './data/realTeacherData';
+import { buildTeacherCourses, buildTeacherCourseReport, buildTeacherOverallReport, EMPTY_REPORTS } from './data/realTeacherData';
 import { buildStudentReports } from './data/realStudentData';
 import { Navigation } from './components/Navigation';
 import { AccessDeniedView } from './components/AccessDeniedView';
@@ -66,6 +67,11 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   // por courseId. Nunca incluye los 5 cursos viejos (esos siguen por el
   // catalogo estatico).
   const [dynamicCourseContent, setDynamicCourseContent] = useState<Map<string, Course>>(new Map());
+  // Progreso real propio (alumno) y de cada alumno a cargo (docente),
+  // agrupado por curso dinamico. Alimenta la barra de progreso en reportes
+  // y en el seguimiento individual del docente.
+  const [myProgressByCourse, setMyProgressByCourse] = useState<CourseProgressSummary[]>([]);
+  const [studentProgressByCourse, setStudentProgressByCourse] = useState<Map<string, CourseProgressSummary[]>>(new Map());
   // Real teacher context: the course selected with "Ver curso" (Alumnos, Progreso
   // and Reporte refer to it) and the student opened with "Ver progreso".
   const [teacherCourseId, setTeacherCourseId] = useState<string | null>(null);
@@ -120,21 +126,48 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     const token = getStoredToken();
     if (!token || (!isRealStudentSession && !isTeacherSession)) {
       setDynamicCourseContent(new Map());
+      setMyProgressByCourse([]);
       return;
     }
     const relevantCourseIds = isRealStudentSession ? myCourseIds : teaching.map((t) => t.courseId);
     const { dynamicIds } = splitCourseIds(relevantCourseIds);
     if (dynamicIds.length === 0) {
       setDynamicCourseContent(new Map());
+    } else {
+      const courses = await Promise.all(
+        dynamicIds.map((id) => fetchCourseContent(token, id).then(toFrontendCourse).catch(() => null)),
+      );
+      const map = new Map<string, Course>();
+      for (const course of courses) if (course) map.set(course.id, course);
+      setDynamicCourseContent(map);
+    }
+
+    if (isRealStudentSession) {
+      fetchMyProgressByCourse(token).then(setMyProgressByCourse).catch(() => setMyProgressByCourse([]));
+    }
+  };
+
+  // Progreso real de cada alumno a cargo del docente (para el seguimiento
+  // individual y el promedio del curso), una vez que se sabe qué alumnos tiene.
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token || !isTeacherSession) {
+      setStudentProgressByCourse(new Map());
       return;
     }
-    const courses = await Promise.all(
-      dynamicIds.map((id) => fetchCourseContent(token, id).then(toFrontendCourse).catch(() => null)),
-    );
-    const map = new Map<string, Course>();
-    for (const course of courses) if (course) map.set(course.id, course);
-    setDynamicCourseContent(map);
-  };
+    const studentIds = [...new Set(teaching.flatMap((t) => t.students.map((s) => s.id)))];
+    if (studentIds.length === 0) {
+      setStudentProgressByCourse(new Map());
+      return;
+    }
+    Promise.all(
+      studentIds.map((id) =>
+        fetchStudentProgressByCourse(token, id)
+          .then((progress): [string, CourseProgressSummary[]] => [id, progress])
+          .catch((): [string, CourseProgressSummary[]] => [id, []]),
+      ),
+    ).then((entries) => setStudentProgressByCourse(new Map(entries)));
+  }, [isTeacherSession, teaching]);
 
   useEffect(() => {
     refreshDynamicCourseContent();
@@ -278,7 +311,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   // Courses (with their students) of the teacher: the real teacher's (assigned by an
   // admin) or, only in demo mode, the demo teacher's.
   const teacherCourses = isRealTeacher
-    ? buildTeacherCourses(teaching, dynamicCourseContent)
+    ? buildTeacherCourses(teaching, dynamicCourseContent, studentProgressByCourse)
     : isDemoTeacher ? demo.teacherCourses : [];
   const selectedTeacherCourse = teacherCourses.find((c) => c.id === teacherCourseId) ?? null;
   // Teacher "Ver curso": selects the course and opens the existing course view (read-only).
@@ -470,18 +503,19 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           ) : isDemo || !user ? (
             <ReportsAnalyticsView data={DEMO_REPORTS} />
           ) : user.role === 'admin' ? (
-            // General report over the whole platform (no activity data in the backend yet).
+            // General report over the whole platform: aun no hay agregado
+            // por todos los cursos/alumnos (fuera del alcance de esta etapa).
             <ReportsAnalyticsView data={EMPTY_REPORTS} scope="general" />
           ) : user.role === 'teacher' ? (
-            // Selected course → report of that course only; no course → all the teacher's courses.
-            // (No activity data in the backend yet.)
+            // Selected course → report of that course only (per-unit, averaged
+            // across its students); no course → all the teacher's courses.
             selectedTeacherCourse ? (
-              <ReportsAnalyticsView data={EMPTY_REPORTS} scope="course" courseName={selectedTeacherCourse.name} />
+              <ReportsAnalyticsView data={buildTeacherCourseReport(selectedTeacherCourse)} scope="course" courseName={selectedTeacherCourse.name} />
             ) : (
-              <ReportsAnalyticsView data={EMPTY_REPORTS} scope="teacher" />
+              <ReportsAnalyticsView data={buildTeacherOverallReport(teacherCourses)} scope="teacher" />
             )
           ) : (
-            <ReportsAnalyticsView data={buildStudentReports(user)} />
+            <ReportsAnalyticsView data={buildStudentReports(user, myProgressByCourse)} />
           )
         )}
 

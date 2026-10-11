@@ -5,6 +5,7 @@ import { toPublicUser, withCourses } from "../../lib/users";
 import { isCodixCourseId } from "../../lib/codixCourses";
 import { createTeacher, EmailAlreadyRegisteredError } from "../auth/auth.service";
 import { isValidEmail, normalizeEmail, validateNewUserInput } from "../auth/auth.validation";
+import { getUserProgressByCourse } from "../progress/progress.service";
 
 const isUniqueConstraintError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -169,6 +170,32 @@ export async function setUserStatus(req: Request, res: Response): Promise<Respon
       return res.status(404).json({ error: "User not found" });
     }
     console.error("setUserStatus error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// Teacher/admin: progreso real de un alumno puntual, agrupado por curso
+// (solo lectura). Admin siempre puede verlo; un docente solo si comparte al
+// menos un curso asignado con ese alumno.
+export async function getStudentProgressByCourse(req: Request, res: Response): Promise<Response> {
+  const studentId = req.params.id;
+  try {
+    if (req.auth!.role === "teacher") {
+      const [teacherAssignments, studentAssignments] = await Promise.all([
+        prisma.courseAssignment.findMany({ where: { userId: req.auth!.userId }, select: { courseId: true } }),
+        prisma.courseAssignment.findMany({ where: { userId: studentId }, select: { courseId: true } }),
+      ]);
+      const teacherCourseIds = new Set(teacherAssignments.map((a) => a.courseId));
+      const sharesCourse = studentAssignments.some((a) => teacherCourseIds.has(a.courseId));
+      if (!sharesCourse) {
+        return res.status(403).json({ error: "No compartís ningún curso con este alumno" });
+      }
+    }
+
+    const progress = await getUserProgressByCourse(studentId);
+    return res.status(200).json({ progress });
+  } catch (error) {
+    console.error("getStudentProgressByCourse error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

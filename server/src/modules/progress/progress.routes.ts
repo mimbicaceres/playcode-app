@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth';
-import { getUserProgress } from './progress.service';
+import { getUserProgress, getUserProgressByCourse } from './progress.service';
 
 const router = Router();
 
@@ -11,6 +11,18 @@ router.get('/', requireAuth, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('getUserProgress error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Progreso real propio, agrupado por curso (solo cursos dinamicos con
+// contenido real). Alimenta la barra de progreso del alumno.
+router.get('/by-course', requireAuth, async (req, res) => {
+  try {
+    const progress = await getUserProgressByCourse(req.auth!.userId);
+    res.json({ progress });
+  } catch (error) {
+    console.error('getUserProgressByCourse error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
