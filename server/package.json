@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx src/prisma/seed.ts",
+    "db:seed:python": "tsx prisma/seed-python-course.ts",
     "db:catalog": "tsx scripts/populateCatalog.ts"
   },
   "dependencies": {
