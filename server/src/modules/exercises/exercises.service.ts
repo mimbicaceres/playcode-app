@@ -1,52 +1,53 @@
 import { prisma } from '../../lib/prisma';
 import { Request, Response } from 'express';
 import { CODIX_CATALOG } from '../../lib/codixCatalog';
-import { Exercise } from '../../types';
+import { gradeSubmission, ReportedOutput } from '../../lib/codeGrader';
 
-/** Helper to locate an exercise definition in the catalog */
+interface AttemptContext {
+  rewardXp: number;
+  unitId?: string;
+  courseId?: string;
+}
+
 /**
- * Busca y devuelve la definición del ejercicio dado su ID dentro del catálogo.
- * @param exerciseId ID del ejercicio a buscar.
- * @returns Objeto Exercise si se encuentra, o null si no existe.
+ * Busca un ejercicio del catalogo estatico (cursos viejos, aun no migrados a
+ * la base de datos) y el contexto de unidad/curso que lo contiene.
  */
-function findExerciseById(exerciseId: string): Exercise | null {
+function findLegacyContext(exerciseId: string): AttemptContext | null {
   for (const course of CODIX_CATALOG) {
     for (const unit of course.units) {
       const ex = unit.exercises.find((e) => e.id === exerciseId);
-      if (ex) return ex;
+      if (ex) {
+        return { rewardXp: ex.rewardXp, unitId: ex.unitId, courseId: unit.courseId };
+      }
     }
   }
   return null;
 }
 
-/** Register an attempt for a student */
-/**
- * Registra un intento de solución de un ejercicio por parte de un estudiante.
- * @param userId ID del usuario que intenta el ejercicio.
- * @param exerciseId ID del ejercicio.
- * @param success Indica si el intento fue exitoso.
- * @returns Objeto con xpEarned y streakDays actualizados.
- */
+/** Registra un intento de solucion de un ejercicio por parte de un estudiante. */
 export async function registerAttempt(
   userId: string,
   exerciseId: string,
   success: boolean,
+  context: AttemptContext,
 ) {
-  // Look up the exercise in the catalog to get the reward XP (backend‑only).
-  const exerciseMeta = findExerciseById(exerciseId);
-  const rewardXp = exerciseMeta?.rewardXp ?? 0;
+  const { rewardXp, unitId, courseId } = context;
 
-  // Upsert the ExerciseProgress row.
   const progress = await prisma.exerciseProgress.upsert({
     where: { userId_exerciseId: { userId, exerciseId } },
     update: {
       attempts: { increment: 1 },
+      unitId,
+      courseId,
       ...(success && { completed: true, completedAt: new Date(), xpEarned: rewardXp }),
       lastAttempt: new Date(),
     },
     create: {
       userId,
       exerciseId,
+      unitId,
+      courseId,
       attempts: 1,
       completed: success,
       completedAt: success ? new Date() : undefined,
@@ -55,11 +56,10 @@ export async function registerAttempt(
     },
   });
 
-  // Update user XP and streak – only on first successful completion.
+  // Update user XP and streak - only on first successful completion.
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('User not found');
 
-  // Streak: compare yesterday's date with the stored updatedAt.
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const consecutive = user.updatedAt.toDateString() === yesterday.toDateString();
@@ -68,32 +68,94 @@ export async function registerAttempt(
   await prisma.user.update({
     where: { id: userId },
     data: {
-      totalXp: { increment: rewardXp },
+      totalXp: { increment: success ? rewardXp : 0 },
       streakDays: newStreak,
     },
   });
 
-  return { xpEarned: rewardXp, streakDays: newStreak };
+  return { attempts: progress.attempts, completed: progress.completed, xpEarned: success ? rewardXp : 0, streakDays: newStreak };
 }
 
 /** Express handler for submitting an exercise attempt */
-/**
- * Manejador Express para recibir la solicitud de envío de intento de ejercicio.
- * @param req Objeto Request que contiene el cuerpo con la información del intento.
- * @param res Objeto Response usado para responder al cliente.
- */
 export async function submitExercise(req: Request, res: Response) {
-  const { success } = req.body ?? {};
+  const exerciseId = req.params.exerciseId;
+  const userId = req.auth!.userId;
+
+  const exercise = await prisma.exercise.findUnique({
+    where: { id: exerciseId },
+    include: { testCases: true, unit: true },
+  });
+
+  // Ejercicio real de tipo code_runner: el servidor es la unica autoridad
+  // sobre si aprobo o no. El cliente manda la salida cruda que produjo su
+  // codigo (nunca un veredicto), y aca se compara contra el expectedOutput
+  // real guardado en la base de datos.
+  if (exercise && exercise.type === 'code_runner') {
+    const { code, outputs, infraError } = (req.body ?? {}) as {
+      code?: string;
+      outputs?: ReportedOutput[];
+      infraError?: string;
+    };
+
+    if (typeof code !== 'string') {
+      return res.status(400).json({ error: 'code string required' });
+    }
+
+    // El navegador no pudo ejecutar el codigo (ej. Pyodide no cargo): no es
+    // un intento fallido del alumno, no se toca ExerciseProgress.
+    if (infraError) {
+      return res.status(503).json({
+        error: 'runner_unavailable',
+        message: 'No pudimos verificar tu código. Reintentá en unos segundos.',
+      });
+    }
+
+    if (!Array.isArray(outputs)) {
+      return res.status(400).json({ error: 'outputs array required' });
+    }
+
+    const grade = gradeSubmission(
+      exercise.testCases.map((tc) => ({ id: tc.id, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden })),
+      outputs,
+    );
+
+    try {
+      const result = await registerAttempt(userId, exerciseId, grade.allPassed, {
+        rewardXp: exercise.rewardXp,
+        unitId: exercise.unitId,
+        courseId: exercise.unit.courseId,
+      });
+      return res.status(200).json({
+        ...result,
+        success: grade.allPassed,
+        results: grade.results.map((r) => ({
+          testCaseId: r.testCaseId,
+          passed: r.passed,
+          isHidden: r.isHidden,
+          // El expectedOutput de casos ocultos nunca se manda al cliente.
+          expectedOutput: r.isHidden ? undefined : r.expectedOutput,
+          actualOutput: r.actualOutput,
+          stderr: r.stderr,
+          timedOut: r.timedOut,
+        })),
+      });
+    } catch (error) {
+      console.error('submitExercise error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  // Flujo viejo (cursos del catalogo estatico, tipo fill_variable): el
+  // cliente sigue mandando el veredicto, como siempre hizo.
+  const { success } = (req.body ?? {}) as { success?: boolean };
   if (typeof success !== 'boolean') {
     return res.status(400).json({ error: 'success boolean required' });
   }
 
-  const exerciseId = req.params.exerciseId;
-  const userId = req.auth!.userId;
-
+  const legacyContext = findLegacyContext(exerciseId);
   try {
-    const result = await registerAttempt(userId, exerciseId, success);
-    return res.status(200).json(result);
+    const result = await registerAttempt(userId, exerciseId, success, legacyContext ?? { rewardXp: 0 });
+    return res.status(200).json({ ...result, success });
   } catch (error) {
     console.error('submitExercise error:', error);
     return res.status(500).json({ error: 'Internal server error' });

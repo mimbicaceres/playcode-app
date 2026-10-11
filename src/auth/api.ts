@@ -278,6 +278,51 @@ export async function submitExercise(
   );
 }
 
+// Resultado por test case de un ejercicio code_runner. expectedOutput viene
+// undefined cuando el test case es oculto (nunca se expone al cliente).
+export interface GradedTestCaseResult {
+  testCaseId: string;
+  passed: boolean;
+  isHidden: boolean;
+  expectedOutput?: string;
+  actualOutput: string;
+  stderr: string;
+  timedOut: boolean;
+}
+
+export interface SubmitCodeExerciseResponse {
+  success: boolean;
+  xpEarned: number;
+  attempts: number;
+  completed: boolean;
+  streakDays: number;
+  results: GradedTestCaseResult[];
+}
+
+// Envía la salida cruda (stdout/stderr por test case) que produjo el código
+// del alumno al correrlo en Pyodide — nunca un veredicto de éxito. El
+// backend es la única autoridad que decide si aprobó, comparando contra el
+// expectedOutput real guardado en la base de datos.
+//
+// Si Pyodide no pudo ejecutar el código (fallo de infraestructura del
+// navegador, no del alumno), se manda `infraError` en lugar de `outputs`:
+// el backend responde 503 y no registra el intento como fallido. El
+// llamador debe capturar el ApiError(503) resultante y ofrecer reintentar.
+export async function submitCodeExercise(
+  token: string,
+  exerciseId: string,
+  code: string,
+  payload:
+    | { outputs: { testCaseId: string; stdout: string; stderr: string; timedOut: boolean }[] }
+    | { infraError: string },
+): Promise<SubmitCodeExerciseResponse> {
+  return request<SubmitCodeExerciseResponse>(`/exercises/${exerciseId}/submit`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ code, ...payload }),
+  });
+}
+
 // Fetch student progress from backend
 export interface UserProgress {
   totalXp: number;
