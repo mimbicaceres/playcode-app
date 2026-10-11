@@ -17,6 +17,9 @@ interface CourseRoadmapViewProps {
   // "Ver progreso" action that opens their individual follow-up.
   teacherStudents?: StudentProgressRecord[];
   onViewStudentProgress?: (studentId: string) => void;
+  // Curso dinamico (student mode): informa que unidad se clickeo antes de
+  // navegar a unit_detail, para que ese componente sepa que mostrar.
+  onSelectUnit?: (unit: Unit) => void;
 }
 
 /**
@@ -36,6 +39,7 @@ export const CourseRoadmapView: React.FC<CourseRoadmapViewProps> = ({
   teacherSummary,
   teacherStudents = [],
   onViewStudentProgress,
+  onSelectUnit,
 }) => {
   const isTeacher = mode === 'teacher';
 
@@ -95,7 +99,7 @@ if (isCompleted && !isReviewMode) {
       return (
         <div
           key={unit.id}
-          onClick={() => onNavigate('unit_detail')}
+          onClick={() => { onSelectUnit?.(unit); onNavigate('unit_detail'); }}
           className="relative z-10 flex flex-col items-center mb-12 group cursor-pointer"
         >
           <div className="w-14 h-14 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-md border-4 border-white z-10 mb-2 transition-transform group-hover:scale-110">
@@ -115,7 +119,7 @@ if (isActive) {
       return (
         <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12 group">
           <div
-            onClick={() => onNavigate('unit_detail')}
+            onClick={() => { onSelectUnit?.(unit); onNavigate('unit_detail'); }}
             className="w-16 h-16 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-lg border-4 border-white z-10 mb-2 ring-4 ring-blue-100 cursor-pointer transition-transform group-hover:scale-105"
           >
             <span className="material-symbols-outlined text-3xl fill ml-0.5">
@@ -135,7 +139,7 @@ if (isActive) {
             <h3 className="font-heading font-bold text-xl text-[#0b1c30] mt-2">{unit.title}</h3>
             <p className="text-xs font-semibold text-[#2563eb] mb-4">{unit.subtitle}</p>
             <button
-              onClick={() => onNavigate('unit_detail')}
+              onClick={() => { onSelectUnit?.(unit); onNavigate('unit_detail'); }}
               className="btn-game-primary py-3 px-6 text-sm w-full flex items-center justify-center gap-2"
             >
               <span>{isReviewMode ? 'Repasar Unidad' : 'Continuar Unidad'}</span>

@@ -1,9 +1,13 @@
 import React from 'react';
-import { ScreenView } from '../types';
+import { ScreenView, Course, Unit } from '../types';
 
 interface UnitDetailViewProps {
   onNavigate: (view: ScreenView) => void;
   onSelectExercise?: (exerciseId: string) => void;
+  // Datos reales (curso dinamico): si estan presentes, remplazan al contenido
+  // de ejemplo de abajo. Sin ellos, el componente se comporta como antes.
+  unit?: Unit;
+  course?: Course;
 }
 
 type ExerciseStatus = 'completed' | 'active' | 'locked';
@@ -17,21 +21,31 @@ interface UnitExercise {
 }
 
 // Example exercises of the demo unit.
-const UNIT_EXERCISES: UnitExercise[] = [
+const DEMO_UNIT_EXERCISES: UnitExercise[] = [
   { id: 'ex1', number: 1, title: 'Tu primera variable', description: 'Declara una variable simple de texto usando comillas.', status: 'completed' },
   { id: 'ex2', number: 2, title: 'Números enteros', description: 'Trabaja con valores numéricos sin comillas para operaciones.', status: 'completed' },
   { id: 'ex3', number: 3, title: 'Cambiando valores', description: 'Aprende cómo actualizar el valor de una variable que ya ha sido declarada.', status: 'active' },
   { id: 'ex4', number: 4, title: 'Booleanos', description: 'Verdadero o falso: el tipo de dato lógico más simple.', status: 'locked' },
 ];
 
-const completedCount = UNIT_EXERCISES.filter((e) => e.status === 'completed').length;
-const progressPercent = Math.round((completedCount / UNIT_EXERCISES.length) * 100);
-
 /**
  * Detalle de una unidad: cabecera, objetivos con progreso y ejercicios.
  * Pensada para verse completa en pantalla (sin desplazarse) en escritorio.
  */
-export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSelectExercise }) => {
+export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSelectExercise, unit, course }) => {
+  const UNIT_EXERCISES: UnitExercise[] = unit
+    ? unit.exercises.map((exercise, index) => ({
+        id: exercise.id,
+        number: index + 1,
+        title: exercise.title,
+        description: exercise.prompt ?? exercise.description,
+        status: exercise.status,
+      }))
+    : DEMO_UNIT_EXERCISES;
+
+  const completedCount = UNIT_EXERCISES.filter((e) => e.status === 'completed').length;
+  const progressPercent = UNIT_EXERCISES.length > 0 ? Math.round((completedCount / UNIT_EXERCISES.length) * 100) : 0;
+
   const openExercise = (id: string) => {
     if (onSelectExercise) onSelectExercise(id);
     onNavigate('exercise');
@@ -48,14 +62,14 @@ export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSe
           <div className="min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <h1 className="font-heading font-bold text-white leading-tight truncate text-lg xl:text-xl">
-                Variables &amp; Asignaciones
+                {unit ? unit.title : 'Variables & Asignaciones'}
               </h1>
               <span className="hidden sm:inline-block text-[10px] font-bold text-blue-300 uppercase tracking-wider bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 rounded-md shrink-0">
-                Programación 1 • Unidad 2
+                {unit && course ? `${course.title} • Unidad ${unit.number}` : 'Programación 1 • Unidad 2'}
               </span>
             </div>
             <p className="text-xs text-slate-300 truncate">
-              Aprende a guardar y transformar información en la memoria de tu programa
+              {unit ? unit.description || unit.subtitle : 'Aprende a guardar y transformar información en la memoria de tu programa'}
             </p>
           </div>
         </div>
@@ -74,7 +88,9 @@ export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSe
         <div className="min-w-0">
           <h2 className="font-heading font-bold text-base xl:text-lg text-[#0b1c30]">Objetivos de la Unidad</h2>
           <p className="text-xs xl:text-sm text-[#434655] mt-1 max-w-3xl leading-relaxed">
-            Las variables son contenedores para almacenar valores de datos (texto, números y booleanos). Al completar estos {UNIT_EXERCISES.length} ejercicios dominarás la declaración, actualización y tipos básicos.
+            {unit
+              ? `Resolvé estos ${UNIT_EXERCISES.length} ejercicios en orden para avanzar en ${unit.title}.`
+              : `Las variables son contenedores para almacenar valores de datos (texto, números y booleanos). Al completar estos ${UNIT_EXERCISES.length} ejercicios dominarás la declaración, actualización y tipos básicos.`}
           </p>
         </div>
 

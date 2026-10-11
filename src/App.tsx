@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ScreenView, UserProfile, Course, TeacherCourseRecord } from './types';
+import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord } from './types';
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, RegisterData, TeachingCourse, clearToken, fetchMe, fetchMyCourses, fetchTeaching, getStoredToken, loginRequest, registerRequest,
+  ApiError, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchMe, fetchMyCourses, fetchTeaching, getStoredToken, loginRequest, registerRequest,
   storeToken, toUserProfile,
 } from './auth/api';
 import { BADGES, COURSES_DATA, DEMO_REPORTS, INITIAL_USER, MASCOT_IMAGES } from './data/mockData';
 import { buildDemoInstitute, initialDemoInstituteState } from './data/demoInstitute';
 import { catalogCoursesFor } from './data/codixCatalog';
+import { splitCourseIds, toFrontendCourse } from './data/dynamicCourses';
 import { buildTeacherCourses, EMPTY_REPORTS } from './data/realTeacherData';
 import { buildStudentReports } from './data/realStudentData';
 import { Navigation } from './components/Navigation';
@@ -27,6 +28,7 @@ import { CourseMapView } from './components/CourseMapView';
 import { CourseRoadmapView } from './components/CourseRoadmapView';
 import { UnitDetailView } from './components/UnitDetailView';
 import { ExerciseCodingView } from './components/ExerciseCodingView';
+import { CodeExerciseView } from './components/CodeExerciseView';
 import { ReportsAnalyticsView } from './components/ReportsAnalyticsView';
 import { StudentProfileView } from './components/StudentProfileView';
 import { TeacherHomeView } from './components/TeacherHomeView';
@@ -58,6 +60,12 @@ export default function App() {
 const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ex1');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  // Unidad elegida en la ruta del curso (solo cursos dinamicos reales).
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  // Contenido real (DB) de los cursos dinamicos asignados, resuelto a Course
+  // por courseId. Nunca incluye los 5 cursos viejos (esos siguen por el
+  // catalogo estatico).
+  const [dynamicCourseContent, setDynamicCourseContent] = useState<Map<string, Course>>(new Map());
   // Real teacher context: the course selected with "Ver curso" (Alumnos, Progreso
   // and Reporte refer to it) and the student opened with "Ver progreso".
   const [teacherCourseId, setTeacherCourseId] = useState<string | null>(null);
@@ -102,6 +110,35 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
       .then(({ courses }) => setTeaching(courses))
       .catch(() => setTeaching([]));
   }, [isTeacherSession, user?.id]);
+
+  const isRealStudentSession = !isDemo && user?.role === 'student';
+  // Pide al backend el contenido real de los cursos dinamicos (los que no
+  // estan en el catalogo estatico) asignados al alumno, o a cargo del
+  // docente. Se puede volver a llamar (ej. tras completar un ejercicio) para
+  // refrescar el status de avance.
+  const refreshDynamicCourseContent = async () => {
+    const token = getStoredToken();
+    if (!token || (!isRealStudentSession && !isTeacherSession)) {
+      setDynamicCourseContent(new Map());
+      return;
+    }
+    const relevantCourseIds = isRealStudentSession ? myCourseIds : teaching.map((t) => t.courseId);
+    const { dynamicIds } = splitCourseIds(relevantCourseIds);
+    if (dynamicIds.length === 0) {
+      setDynamicCourseContent(new Map());
+      return;
+    }
+    const courses = await Promise.all(
+      dynamicIds.map((id) => fetchCourseContent(token, id).then(toFrontendCourse).catch(() => null)),
+    );
+    const map = new Map<string, Course>();
+    for (const course of courses) if (course) map.set(course.id, course);
+    setDynamicCourseContent(map);
+  };
+
+  useEffect(() => {
+    refreshDynamicCourseContent();
+  }, [isRealStudentSession, isTeacherSession, myCourseIds, teaching]);
 
   // Changes made while in demo mode only touch the demo user.
   const updateViewUser = (update: (prev: UserProfile) => UserProfile) => {
@@ -217,17 +254,32 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   const showNoCourses = !isDenied && !teacherMode && COURSE_VIEWS.includes(currentView) && !hasAssignedCourses;
   const activeView: ScreenView | null = isDenied || showNoCourses ? null : currentView;
   // Course catalog shown in the course views: the example catalog in demo mode,
-  // and the CODIX courses an admin assigned (without progress yet) for real users.
-  const visibleCourses = isDemo ? COURSES_DATA : catalogCoursesFor(user?.assignedCourseIds ?? []);
-  // Real students: units and activities have no progress tracking in the backend
-  // yet, so these views show a notice instead of example content.
+  // and for real users the CODIX static courses the admin assigned plus any
+  // dynamic (DB-backed) course content already fetched.
+  const visibleCourses = isDemo
+    ? COURSES_DATA
+    : [...catalogCoursesFor(user?.assignedCourseIds ?? []), ...dynamicCourseContent.values()];
   const isRealStudent = !isDemo && user?.role === 'student';
+  // Curso real activo del alumno (si tiene contenido dinamico real cargado,
+  // en vez del aviso de "actividades no disponibles").
+  const activeStudentCourse = isRealStudent
+    ? visibleCourses.find((c) => c.id === selectedCourse?.id) ?? visibleCourses[0] ?? null
+    : null;
+  const isDynamicCourseActive = !!activeStudentCourse && dynamicCourseContent.has(activeStudentCourse.id);
+  const activeUnit = isDynamicCourseActive
+    ? selectedUnit ?? activeStudentCourse?.units[0] ?? null
+    : null;
+  const activeExercise = activeUnit
+    ? activeUnit.exercises.find((e) => e.id === selectedExerciseId) ?? activeUnit.exercises[0] ?? null
+    : null;
 
   const goHome = () => user && navigate(getPathForView(getHomeView(user.role)));
   const openDemo = () => user && navigate(getPathForView(getHomeView(user.role), true));
   // Courses (with their students) of the teacher: the real teacher's (assigned by an
   // admin) or, only in demo mode, the demo teacher's.
-  const teacherCourses = isRealTeacher ? buildTeacherCourses(teaching) : isDemoTeacher ? demo.teacherCourses : [];
+  const teacherCourses = isRealTeacher
+    ? buildTeacherCourses(teaching, dynamicCourseContent)
+    : isDemoTeacher ? demo.teacherCourses : [];
   const selectedTeacherCourse = teacherCourses.find((c) => c.id === teacherCourseId) ?? null;
   // Teacher "Ver curso": selects the course and opens the existing course view (read-only).
   const openTeacherCourse = (teacherCourse: TeacherCourseRecord) => {
@@ -346,14 +398,13 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           ) : (
             <CourseRoadmapView
               onNavigate={setCurrentView}
-              course={isRealStudent
-                ? visibleCourses.find((c) => c.id === selectedCourse?.id) ?? visibleCourses[0] ?? null
-                : selectedCourse}
+              course={isRealStudent ? activeStudentCourse : selectedCourse}
+              onSelectUnit={isRealStudent ? setSelectedUnit : undefined}
             />
           )
         )}
 
-        {(activeView === 'unit_detail' || activeView === 'exercise') && isRealStudent && (
+        {(activeView === 'unit_detail' || activeView === 'exercise') && isRealStudent && !isDynamicCourseActive && (
           <div className="w-full max-w-3xl mx-auto px-4 py-10">
             <EmptyState
               imageSrc={MASCOT_IMAGES.mainHero}
@@ -364,12 +415,24 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
         )}
 
         {activeView === 'unit_detail' && !isRealStudent && (
-          <UnitDetailView 
-            onNavigate={setCurrentView} 
+          <UnitDetailView
+            onNavigate={setCurrentView}
             onSelectExercise={(exId: string) => {
               setSelectedExerciseId(exId);
               setCurrentView('exercise');
-            }} 
+            }}
+          />
+        )}
+
+        {activeView === 'unit_detail' && isRealStudent && isDynamicCourseActive && activeStudentCourse && activeUnit && (
+          <UnitDetailView
+            onNavigate={setCurrentView}
+            onSelectExercise={(exId: string) => {
+              setSelectedExerciseId(exId);
+              setCurrentView('exercise');
+            }}
+            unit={activeUnit}
+            course={activeStudentCourse}
           />
         )}
 
@@ -379,6 +442,17 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
             onAddXp={handleAddXp}
             currentExerciseId={selectedExerciseId}
             onExerciseCompleted={handleExerciseCompleted}
+          />
+        )}
+
+        {activeView === 'exercise' && isRealStudent && isDynamicCourseActive && activeStudentCourse && activeUnit && activeExercise && (
+          <CodeExerciseView
+            onNavigate={setCurrentView}
+            course={activeStudentCourse}
+            unit={activeUnit}
+            exercise={activeExercise}
+            onExerciseCompleted={handleExerciseCompleted}
+            onRefreshContent={refreshDynamicCourseContent}
           />
         )}
 
