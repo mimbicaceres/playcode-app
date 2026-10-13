@@ -6,7 +6,7 @@ import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
   ApiError, CourseProgressSummary, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchMe, fetchMyCourses,
   fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest, registerRequest,
-  storeToken, toUserProfile,
+  storeToken, toUserProfile, updateMyAvatarRequest,
 } from './auth/api';
 import { BADGES, COURSES_DATA, DEMO_REPORTS, INITIAL_USER, MASCOT_IMAGES } from './data/mockData';
 import { buildDemoInstitute, initialDemoInstituteState } from './data/demoInstitute';
@@ -205,11 +205,25 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     }
   };
 
-  const handleUpdateProfile = (updatedData: Partial<UserProfile>) => {
-    updateViewUser((prev) => ({
-      ...prev,
-      ...updatedData
-    }));
+  // Lo unico que un alumno/docente puede cambiar de su propia cuenta es la
+  // foto de perfil; nombre/apellido/escuela/año son de solo lectura (los
+  // cambia el admin). En modo demo no hay backend, se guarda en el estado local.
+  const handleUpdateAvatar = async (avatarDataUrl: string): Promise<string | null> => {
+    if (isDemo) {
+      updateViewUser((prev) => ({ ...prev, avatarUrl: avatarDataUrl }));
+      return null;
+    }
+    const token = getStoredToken();
+    if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
+    try {
+      const { user: apiUser } = await updateMyAvatarRequest(token, avatarDataUrl);
+      setUser(toUserProfile(apiUser));
+      return null;
+    } catch (error) {
+      return error instanceof ApiError && error.status === 400
+        ? 'La imagen no es válida o es demasiado grande.'
+        : 'No se pudo conectar con el servidor. Intentá de nuevo.';
+    }
   };
 
   // Returns an error message to show in the form, or null on success.
@@ -537,7 +551,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
               setSelectedCourse(course);
               setCurrentView('course_roadmap');
             }}
-            onUpdateProfile={handleUpdateProfile}
+            onUpdateAvatar={handleUpdateAvatar}
             onNavigate={setCurrentView}
           />
         )}

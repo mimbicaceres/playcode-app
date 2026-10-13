@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { AchievementBadge, Course, ScreenView, UserProfile } from '../types';
 import { DEMO_STUDENT_HOME, MASCOT_IMAGES } from '../data/mockData';
-import { EditProfileModal } from './Modals/EditProfileModal';
+import { EditAvatarModal } from './Modals/EditAvatarModal';
 
 interface StudentProfileViewProps {
   user: UserProfile;
   badges: AchievementBadge[];
-  onUpdateProfile: (updated: Partial<UserProfile>) => void;
+  // Nombre, apellido, escuela y año son de solo lectura para el alumno (los
+  // cambia el admin); lo único que el alumno puede actualizar es su foto.
+  onUpdateAvatar: (avatarDataUrl: string) => Promise<string | null>;
   onNavigate: (view: ScreenView) => void;
   // Real students: their assigned courses. Without it (demo mode) the example
   // courses from DEMO_STUDENT_HOME are shown.
@@ -75,19 +77,6 @@ const CourseCard: React.FC<{ course: CourseCardModel }> = ({ course }) => (
   </button>
 );
 
-/** Dato de la cuenta: icono, etiqueta y valor. */
-const InfoRow: React.FC<{ icon: string; label: string; value: string }> = ({ icon, label, value }) => (
-  <div className="flex items-center gap-2.5 min-w-0 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-    <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-      <span className="material-symbols-outlined text-lg">{icon}</span>
-    </div>
-    <div className="min-w-0">
-      <p className="text-[10px] font-bold text-[#737686] uppercase tracking-wider">{label}</p>
-      <p className="text-[13px] font-semibold text-[#0b1c30] truncate">{value}</p>
-    </div>
-  </div>
-);
-
 /** Contenedor de las tarjetas de contenido (insignias, datos, cursos). */
 const Panel: React.FC<{
   icon: string;
@@ -125,12 +114,12 @@ const Panel: React.FC<{
 export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
   user,
   badges,
-  onUpdateProfile,
+  onUpdateAvatar,
   onNavigate,
   courses,
   onOpenCourse
 }) => {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const isDemo = !courses;
   const unlockedBadges = badges.filter((badge) => badge.unlocked).length;
   const hasAssignedCourses = user.assignedCourseIds.length > 0;
@@ -166,9 +155,9 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
           <div className="h-full w-full bg-gradient-to-r from-[#0b1c30] via-[#0d223a] to-[#122e4e] px-4 py-3 rounded-2xl border border-white/10 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3.5 min-w-0">
               <button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => setIsAvatarModalOpen(true)}
                 className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/20 bg-white/10 shrink-0 shadow-md cursor-pointer hover:border-white/40 transition-colors"
-                aria-label="Editar perfil"
+                aria-label="Cambiar foto de perfil"
               >
                 <img
                   src={user.avatarUrl || MASCOT_IMAGES.roundAvatar}
@@ -195,11 +184,11 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
             <div className="flex sm:flex-col items-center sm:items-stretch gap-2 shrink-0">
               <button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => setIsAvatarModalOpen(true)}
                 className="btn-game-amber px-4 py-1.5 text-xs flex items-center justify-center gap-1.5"
               >
-                <span>Editar Perfil</span>
-                <span className="material-symbols-outlined text-sm">edit</span>
+                <span>Cambiar foto</span>
+                <span className="material-symbols-outlined text-sm">photo_camera</span>
               </button>
               <button
                 onClick={() => onNavigate('dashboard')}
@@ -237,9 +226,10 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Row 2: badges + account data */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch lg:flex-1 lg:max-h-[280px]">
-        <div className="lg:col-span-7 flex">
+      {/* Row 2: badges (los datos personales ya no se muestran/editan aca:
+          nombre/escuela/año son de solo lectura, solo el admin los cambia). */}
+      <div className="grid grid-cols-1 gap-4 items-stretch lg:flex-1 lg:max-h-[280px]">
+        <div className="flex">
           <Panel
             icon="military_tech"
             iconClassName="text-amber-500"
@@ -275,22 +265,6 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
               <p className="text-center text-[11px] font-bold text-blue-700">
                 {unlockedBadges} / {badges.length} desbloqueadas
               </p>
-            </div>
-          </Panel>
-        </div>
-
-        <div className="lg:col-span-5 flex">
-          <Panel
-            icon="badge"
-            iconClassName="text-slate-500"
-            title="Mis datos"
-            action={{ label: 'Editar', icon: 'edit', onClick: () => setIsEditModalOpen(true) }}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <InfoRow icon="mail" label="Email" value={user.email} />
-              <InfoRow icon="school" label="Institución" value={user.school || 'Sin institución'} />
-              <InfoRow icon="grade" label="Año" value={user.grade || 'Sin definir'} />
-              <InfoRow icon="person" label="Rol" value="Estudiante" />
             </div>
           </Panel>
         </div>
@@ -333,12 +307,11 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
-      <EditProfileModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        user={user}
-        onSave={onUpdateProfile}
+      <EditAvatarModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        currentAvatarUrl={user.avatarUrl}
+        onSave={onUpdateAvatar}
       />
     </div>
   );

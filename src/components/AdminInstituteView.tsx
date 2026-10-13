@@ -236,7 +236,7 @@ const stats = [
                 <option value="teacher">Docentes</option>
                 <option value="admin">Administradores</option>
               </select>
-              {actions.createStudent && (
+              {actions.createStudent && roleFilter === 'student' && (
                 <button
                   onClick={actions.createStudent}
                   className="bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"

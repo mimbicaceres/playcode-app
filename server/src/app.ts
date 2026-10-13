@@ -12,8 +12,10 @@ export function createApp(): Express {
   const app = express();
 
   app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  // Limite subido de 100kb (default) a 4mb: la foto de perfil se manda como
+  // data:image/... en base64 (hasta ~2MB de archivo original).
+  app.use(express.json({ limit: "4mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "4mb" }));
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({

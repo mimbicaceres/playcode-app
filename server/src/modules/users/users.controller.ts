@@ -102,6 +102,34 @@ export async function createTeacherUser(req: Request, res: Response): Promise<Re
   }
 }
 
+// El propio usuario (cualquier rol): cambia su foto de perfil. No puede
+// cambiar nombre/apellido/escuela/curso-ano -- esos son de solo lectura para
+// alumno/docente, solo el admin los edita via updateUser.
+const MAX_AVATAR_LENGTH = 2_800_000; // ~2MB de archivo original en base64
+
+export async function updateMyAvatar(req: Request, res: Response): Promise<Response> {
+  const { avatarUrl } = (req.body ?? {}) as Record<string, unknown>;
+
+  if (typeof avatarUrl !== "string" || !avatarUrl.startsWith("data:image/")) {
+    return res.status(400).json({ error: "avatarUrl must be a data:image/... URI" });
+  }
+  if (avatarUrl.length > MAX_AVATAR_LENGTH) {
+    return res.status(400).json({ error: "La imagen es demasiado grande (maximo ~2MB)." });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.auth!.userId },
+      data: { avatarUrl },
+      include: withCourses,
+    });
+    return res.status(200).json({ user: toPublicUser(user) });
+  } catch (error) {
+    console.error("updateMyAvatar error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // Admin only. Any "role" sent in the body is ignored: the account is always a student.
 export async function createStudentUser(req: Request, res: Response): Promise<Response> {
   const validation = validateNewUserInput(req.body);

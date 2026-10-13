@@ -7,6 +7,7 @@ import {
   listStudents,
   createTeacherUser,
   createStudentUser,
+  updateMyAvatar,
   updateUser,
   setUserStatus,
   setUserCourses,
@@ -18,6 +19,7 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/me", getMe);
+router.patch("/me/avatar", updateMyAvatar);
 router.get("/me/teaching", requireRole("teacher"), getTeaching);
 router.get("/students", requireRole("teacher", "admin"), listStudents);
 router.get("/", requireRole("admin"), listUsers);

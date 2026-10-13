@@ -192,6 +192,21 @@ export function updateUserRequest(token: string, id: string, data: UserEditData)
 }
 
 /**
+ * Cambia la foto de perfil del propio usuario (cualquier rol). Es lo único
+ * que un alumno/docente puede modificar de su cuenta; nombre, apellido,
+ * escuela y año son de solo lectura (los edita el admin con updateUserRequest).
+ * @param token Token JWT del usuario.
+ * @param avatarDataUrl Imagen codificada como data:image/...;base64,... (hasta ~2MB).
+ */
+export function updateMyAvatarRequest(token: string, avatarDataUrl: string) {
+  return request<{ user: ApiUser }>('/users/me/avatar', {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ avatarUrl: avatarDataUrl }),
+  });
+}
+
+/**
  * Cambia el estado activo/inactivo de una cuenta de usuario.
  * @param token Token JWT del administrador.
  * @param id ID del usuario.
