@@ -21,7 +21,10 @@ interface SeedExercise {
   prompt: string;
   starterCode: string;
   rewardXp: number;
-  hint?: string;
+  // Pista propia del ejercicio: se muestra al alumno cuando falla (en vez
+  // del traceback crudo de Python, que no le dice nada util a quien recien
+  // esta aprendiendo). Todos los ejercicios tienen una.
+  hint: string;
   compute: (lines: string[]) => string;
   testCases: SeedTestCase[];
 }
@@ -53,6 +56,7 @@ const secuenciales: SeedExercise[] = [
       'Un artículo cuesta cierto precio hoy. Dado el precio actual, un porcentaje de inflación anual, y una cantidad de años, calculá cuánto va a costar el artículo al final de esos años (aplicando la inflación compuesta cada año). Leé los tres valores con input(), en este orden: precio actual, porcentaje de inflación anual, y cantidad de años. Imprimí el precio final con 2 decimales (podés usar print(f"{valor:.2f}")).',
     starterCode: "precio = float(input())\nporcentaje = float(input())\nanios = int(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "La formula es precio * (1 + porcentaje/100) ** anios. El exponente ** es la cantidad de años.",
     compute: (ls) => {
       const [precio, porcentaje, anios] = ls.map(Number);
       return (precio * Math.pow(1 + porcentaje / 100, anios)).toFixed(2);
@@ -69,6 +73,7 @@ const secuenciales: SeedExercise[] = [
       "Leé los tres coeficientes a, b y c de una ecuación cuadrática ax² + bx + c = 0 (en ese orden, con input()) y calculá su discriminante (b² - 4ac). Imprimí el resultado.",
     starterCode: "a = int(input())\nb = int(input())\nc = int(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "El discriminante es b**2 - 4*a*c. Usá ** para elevar al cuadrado, no ^.",
     compute: (ls) => {
       const [a, b, c] = ls.map(Number);
       return String(b * b - 4 * a * c);
@@ -86,6 +91,7 @@ const secuenciales: SeedExercise[] = [
     starterCode:
       "pc = float(input())\nimpresora = float(input())\nganancia = float(input())\niva = float(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "Primero sumá los dos costos y aplicales la ganancia para obtener un subtotal. Después aplicale el IVA a ESE subtotal, no al costo original.",
     compute: (ls) => {
       const [pc, imp, gan, iva] = ls.map(Number);
       const subtotal = (pc + imp) * (1 + gan / 100);
@@ -103,6 +109,7 @@ const secuenciales: SeedExercise[] = [
       "Leé la base mayor, la base menor y la altura de un trapecio (en ese orden, con input()) y calculá su superficie: (base_mayor + base_menor) * altura / 2. Imprimí el resultado con 2 decimales.",
     starterCode: "base_mayor = float(input())\nbase_menor = float(input())\naltura = float(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "No te olvides del paréntesis: es (base_mayor + base_menor) * altura / 2, no base_mayor + base_menor * altura / 2.",
     compute: (ls) => {
       const [B, b, h] = ls.map(Number);
       return (((B + b) * h) / 2).toFixed(2);
@@ -119,6 +126,7 @@ const secuenciales: SeedExercise[] = [
       "En una instalación eléctrica se calculó la sección base de un conductor. Por seguridad, hay que incrementarla en un porcentaje dado. Leé (con input()) la sección base y el porcentaje de incremento de seguridad, y calculá la sección final: base * (1 + porcentaje/100). Imprimí el resultado con 2 decimales.",
     starterCode: "seccion_base = float(input())\nporcentaje = float(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "Es seccion_base * (1 + porcentaje/100). Acordate de dividir el porcentaje por 100 antes de sumarle 1.",
     compute: (ls) => {
       const [base, pct] = ls.map(Number);
       return (base * (1 + pct / 100)).toFixed(2);
@@ -135,6 +143,7 @@ const secuenciales: SeedExercise[] = [
       "Leé las partes real e imaginaria de dos números complejos (a+bi) y (c+di): primero a, luego b, luego c, luego d (enteros, con input()). Calculá su producto (a+bi)*(c+di) = (ac-bd) + (ad+bc)i, e imprimí la parte real y la parte imaginaria separadas por un espacio. Por ejemplo, si el resultado es 11 + 10i, imprimís: 11 10",
     starterCode: "a = int(input())\nb = int(input())\nc = int(input())\nd = int(input())\n# completa el calculo\n",
     rewardXp: 15,
+    hint: "La parte real es a*c - b*d. La parte imaginaria es a*d + b*c. Son dos cuentas separadas, no las mezcles.",
     compute: (ls) => {
       const [a, b, c, d] = ls.map(Number);
       return `${a * c - b * d} ${a * d + b * c}`;
@@ -151,6 +160,7 @@ const secuenciales: SeedExercise[] = [
       "Leé tres valores positivos (con input(), de a uno) y calculá su media geométrica: la raíz cúbica del producto de los tres. Imprimí el resultado con 2 decimales.",
     starterCode: "a = float(input())\nb = float(input())\nc = float(input())\n# completa el calculo\n",
     rewardXp: 15,
+    hint: "La raiz cubica de un numero x se escribe x ** (1/3). No te olvides de los parentesis alrededor de 1/3.",
     compute: (ls) => {
       const [a, b, c] = ls.map(Number);
       return Math.pow(a * b * c, 1 / 3).toFixed(2);
@@ -173,6 +183,7 @@ const condicionales: SeedExercise[] = [
       "Leé tres números enteros (con input(), de a uno) e imprimilos ordenados de mayor a menor, separados por un espacio. Por ejemplo, si leíste 5, 9 y 2, imprimís: 9 5 2",
     starterCode: "a = int(input())\nb = int(input())\nc = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Podés armar una lista [a, b, c] y ordenarla con sorted(lista, reverse=True) para que quede de mayor a menor.",
     compute: (ls) => nums(ls.join("\n")).sort((a, b) => b - a).join(" "),
     testCases: [
       { input: "5\n9\n2", isHidden: false },
@@ -186,6 +197,7 @@ const condicionales: SeedExercise[] = [
       "Leé dos números (con input()) y calculá su suma. Imprimí 'positiva' si la suma es mayor a 0, 'negativa' si es menor a 0, o 'nula' si es igual a 0.",
     starterCode: "a = float(input())\nb = float(input())\n# completa la logica\n",
     rewardXp: 10,
+    hint: "Calculá la suma en una variable primero, y despues usá if/elif/else para comparar esa variable con 0.",
     compute: (ls) => {
       const [a, b] = ls.map(Number);
       const s = a + b;
@@ -205,6 +217,7 @@ const condicionales: SeedExercise[] = [
     starterCode:
       "anio_nac = int(input())\nmes_nac = int(input())\ndia_nac = int(input())\nanio_act = int(input())\nmes_act = int(input())\ndia_act = int(input())\n# completa la logica\n",
     rewardXp: 20,
+    hint: "Restá los años primero. Despues, si el mes actual es menor al mes de nacimiento (o son iguales pero el dia actual es menor), todavia no cumplio anios este anio: restale 1.",
     compute: (ls) => {
       const [by, bm, bd, cy, cm, cd] = ls.map(Number);
       let age = cy - by;
@@ -223,6 +236,7 @@ const condicionales: SeedExercise[] = [
       "Vas a viajar a Europa y querés saber cuántos euros podés comprar. Leé el monto en pesos que tenés y la cotización del euro en pesos (con input()), y calculá cuántos euros podés comprar (monto / cotización). Imprimí el resultado con 2 decimales.",
     starterCode: "monto_pesos = float(input())\ncotizacion = float(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "Es una division simple: monto_pesos / cotizacion.",
     compute: (ls) => {
       const [monto, tasa] = ls.map(Number);
       return (monto / tasa).toFixed(2);
@@ -239,6 +253,7 @@ const condicionales: SeedExercise[] = [
       "Leé dos números enteros positivos A y B (con input(), en ese orden). Si son iguales, imprimí 'son iguales'. Si A es divisor de B, imprimí 'A divide a B'. Si B es divisor de A, imprimí 'B divide a A'. Si ninguno de los dos divide al otro, imprimí 'ninguno divide al otro'.",
     starterCode: "a = int(input())\nb = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Primero fijate si a == b. Despues, b % a == 0 significa que a divide a b exactamente (el resto es cero).",
     compute: (ls) => {
       const [a, b] = ls.map(Number);
       if (a === b) return "son iguales";
@@ -259,6 +274,7 @@ const condicionales: SeedExercise[] = [
       "Leé un número entero de tres cifras (con input()). Descomponelo en centena, decena y unidad, y determiná si es múltiplo de 3. Imprimí los tres dígitos y el resultado separados por espacio, por ejemplo: 3 4 5 si es multiplo de 3",
     starterCode: "n = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "La centena es n // 100. La decena es (n % 100) // 10. La unidad es n % 10.",
     compute: (ls) => {
       const n = Number(ls[0]);
       const c = Math.floor(n / 100);
@@ -279,6 +295,7 @@ const condicionales: SeedExercise[] = [
       "Leé un monto en pesos (entero, con input()) y calculá cuántos billetes de 100, de 10 y de 1 se necesitan para pagarlo exactamente, usando la menor cantidad de billetes posible (empezando por los de mayor valor). Imprimí las tres cantidades separadas por espacio: billetes de 100, de 10 y de 1.",
     starterCode: "monto = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Sacá primero cuantos de 100 entran con //, y quedate con el resto usando %. Repetí lo mismo con el resto para los de 10, y lo que queda son los de 1.",
     compute: (ls) => {
       let n = Number(ls[0]);
       const c100 = Math.floor(n / 100);
@@ -299,6 +316,7 @@ const condicionales: SeedExercise[] = [
       "Leé el monto de una compra y un código de entrega (con input(): 1 = retiro en el local, 2 = envío a domicilio). Si retira en el local, aplicá un 10% de descuento. Si es envío a domicilio, sumá un costo fijo de envío de $500. Imprimí el total final con 2 decimales.",
     starterCode: "monto = float(input())\ntipo_entrega = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Si tipo_entrega == 1, el total es monto * 0.9. Si no, el total es monto + 500.",
     compute: (ls) => {
       const [monto, tipo] = ls.map(Number);
       return (tipo === 1 ? monto * 0.9 : monto + 500).toFixed(2);
@@ -315,6 +333,7 @@ const condicionales: SeedExercise[] = [
       "Un edificio tiene una planta baja y una cantidad de pisos de igual altura. Leé (con input()) la cantidad de pisos, la altura de cada piso, y la altura de la planta baja. Calculá la altura total del edificio e imprimila con 2 decimales.",
     starterCode: "pisos = int(input())\naltura_piso = float(input())\naltura_pb = float(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "La altura total es altura_pb + pisos * altura_piso.",
     compute: (ls) => {
       const [pisos, alturaPiso, pb] = ls.map(Number);
       return (pb + pisos * alturaPiso).toFixed(2);
@@ -331,6 +350,7 @@ const condicionales: SeedExercise[] = [
       "Leé la cantidad de inscriptos y la cantidad de egresados de una carrera (con input(), en ese orden). Calculá el porcentaje de egresados sobre el total de inscriptos e imprimilo con 2 decimales.",
     starterCode: "inscriptos = int(input())\negresados = int(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "El porcentaje es (egresados / inscriptos) * 100.",
     compute: (ls) => {
       const [insc, egr] = ls.map(Number);
       return ((egr / insc) * 100).toFixed(2);
@@ -347,6 +367,7 @@ const condicionales: SeedExercise[] = [
       "Leé dos números enteros (con input()). Calculá su producto usando solamente sumas repetidas (sin usar el operador *), por ejemplo con un bucle que vaya sumando uno de los números tantas veces como indique el otro. Imprimí el resultado.",
     starterCode: "a = int(input())\nb = int(input())\n# completa la logica (sin usar *)\n",
     rewardXp: 20,
+    hint: "Usá total = 0 y un for _ in range(b): total += a. Al final, total tiene el producto.",
     compute: (ls) => {
       const [a, b] = ls.map(Number);
       return String(a * b);
@@ -363,6 +384,7 @@ const condicionales: SeedExercise[] = [
       "Leé un dividendo y un divisor, ambos enteros positivos (con input()). Calculá el cociente y el resto de la división usando solamente sumas y restas (sin usar los operadores // ni %), por ejemplo restando el divisor repetidamente. Imprimí el cociente y el resto separados por un espacio.",
     starterCode: "dividendo = int(input())\ndivisor = int(input())\n# completa la logica (sin usar // ni %)\n",
     rewardXp: 20,
+    hint: "Usá un while que, mientras el resto (empezando en dividendo) sea mayor o igual al divisor, le reste el divisor y sume 1 al cociente.",
     compute: (ls) => {
       const [a, b] = ls.map(Number);
       const q = Math.floor(a / b);
@@ -380,6 +402,7 @@ const condicionales: SeedExercise[] = [
       "Leé un número entero V (con input()). Imprimí, separados por espacio, el valor de V, su cuadrado y su cubo. Por ejemplo, para V=3: 3 9 27",
     starterCode: "v = int(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "Podés hacer print(v, v*v, v*v*v) directamente: print con varios argumentos los separa con espacio.",
     compute: (ls) => {
       const v = Number(ls[0]);
       return `${v} ${v * v} ${v * v * v}`;
@@ -396,6 +419,7 @@ const condicionales: SeedExercise[] = [
       "Leé un valor inicial V y un incremento (con input()). Imprimí una tabla de 10 filas: en cada fila, el valor actual de V, su cuadrado y su cubo (separados por espacio), y después sumale el incremento a V para la fila siguiente.",
     starterCode: "v = int(input())\nincremento = int(input())\n# completa el bucle de 10 filas\n",
     rewardXp: 20,
+    hint: "Dentro de un for _ in range(10): primero imprimí la fila con los valores actuales, y DESPUES sumale el incremento a v (si lo hacés al reves, la primera fila sale mal).",
     compute: (ls) => {
       let [v, inc] = ls.map(Number);
       const rows: string[] = [];
@@ -417,6 +441,7 @@ const condicionales: SeedExercise[] = [
       "Leé un número entero positivo N (con input()). Calculá la suma de los cuadrados de los números de 1 a N (1² + 2² + ... + N²) e imprimí el resultado.",
     starterCode: "n = int(input())\n# completa el bucle\n",
     rewardXp: 15,
+    hint: "Usá suma = 0 y un for i in range(1, n+1): suma += i*i. Ojo que range(1, n) NO incluye a n, por eso es n+1.",
     compute: (ls) => {
       const n = Number(ls[0]);
       let s = 0;
@@ -456,6 +481,7 @@ const condicionales: SeedExercise[] = [
     starterCode:
       "n = int(input())\ntotal = 0.0\n# completa el bucle que lee N importes y los suma\nprint(f\"{total:.2f}\")\n",
     rewardXp: 15,
+    hint: "El total y el print ya estan armados. Tu bucle solo tiene que hacer, N veces: leer un importe con input() y sumarlo a total.",
     compute: (ls) => {
       const n = Number(ls[0]);
       const precios = ls.slice(1, 1 + n).map(Number);
@@ -473,6 +499,7 @@ const condicionales: SeedExercise[] = [
       "Leé el importe de una compra (con input()). Si el importe es menor o igual a $1000, no se cobra impuesto y se paga en 1 cuota. Si es menor o igual a $5000, se cobra 5% de impuesto en 3 cuotas. Si es mayor, se cobra 10% de impuesto en 6 cuotas. Imprimí el monto del impuesto (con 2 decimales) y la cantidad de cuotas, separados por un espacio.",
     starterCode: "importe = float(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Usá if/elif/else en ese orden (<=1000, <=5000, si no). El impuesto es importe * tasa, donde tasa es 0, 0.05 o 0.10 segun el caso.",
     compute: (ls) => {
       const importe = Number(ls[0]);
       let tasa: number, cuotas: number;
@@ -501,6 +528,7 @@ const condicionales: SeedExercise[] = [
       "La sucesión de Fibonacci empieza en 0, 1 y cada número siguiente es la suma de los dos anteriores. Leé un número N (con input()) e imprimí los primeros N números de Fibonacci, separados por espacio.",
     starterCode: "n = int(input())\n# completa la logica\n",
     rewardXp: 20,
+    hint: "Empezá una lista fib = [0, 1] y agregale fib[-1] + fib[-2] hasta que tenga N elementos. Despues imprimila con print(*fib[:n]).",
     compute: (ls) => {
       const n = Number(ls[0]);
       const fib = [0, 1];
@@ -519,6 +547,7 @@ const condicionales: SeedExercise[] = [
       "Leé los coeficientes enteros a, b y c de una función cuadrática y = ax² + bx + c, y un valor entero de x (con input(), en ese orden). Calculá el valor de y para ese x e imprimilo.",
     starterCode: "a = int(input())\nb = int(input())\nc = int(input())\nx = int(input())\n# completa el calculo\n",
     rewardXp: 10,
+    hint: "Es a*x*x + b*x + c (o a*x**2 + b*x + c, es lo mismo).",
     compute: (ls) => {
       const [a, b, c, x] = ls.map(Number);
       return String(a * x * x + b * x + c);
@@ -536,6 +565,7 @@ const condicionales: SeedExercise[] = [
     starterCode:
       "pos = 0\ncero = 0\nneg = 0\nwhile True:\n    a = float(input())\n    b = float(input())\n    c = float(input())\n    if a == 9999:\n        break\n    # completa: calcula el discriminante y actualiza los contadores\nprint(pos, cero, neg)\n",
     rewardXp: 25,
+    hint: "Calculá disc = b*b - 4*a*c, y despues con if/elif/else sumale 1 a pos, cero o neg segun si disc es mayor, igual o menor a 0.",
     compute: (ls) => {
       let i = 0;
       let pos = 0,
@@ -566,6 +596,7 @@ const condicionales: SeedExercise[] = [
       "Un número de tres cifras es especial si es igual a la suma de los cubos de sus dígitos (por ejemplo, 153 = 1³ + 5³ + 3³). Leé un número de tres cifras (con input()) y determiná si cumple esta propiedad. Imprimí 'es armstrong' o 'no es armstrong'.",
     starterCode: "n = int(input())\n# completa la logica\n",
     rewardXp: 20,
+    hint: "Separá centena, decena y unidad como en el ejercicio 1.12, elevá cada una al cubo (** 3), sumalas, y comparalas con n.",
     compute: (ls) => {
       const n = Number(ls[0]);
       const c = Math.floor(n / 100);
@@ -585,6 +616,7 @@ const condicionales: SeedExercise[] = [
     prompt: "Leé un número N (con input()). Imprimí todos los números primos menores a N, separados por espacio.",
     starterCode: "n = int(input())\n# completa la logica\n",
     rewardXp: 20,
+    hint: "Recorré los numeros de 2 a n-1 con un for, fijate si cada uno es primo (como en el ejercicio 1.22) y agregalo a una lista si lo es. Al final, print(*lista).",
     compute: (ls) => {
       const n = Number(ls[0]);
       const isPrime = (x: number) => {
@@ -609,6 +641,7 @@ const condicionales: SeedExercise[] = [
     starterCode:
       "n = int(input())\ntotal = 0.0\n# completa el bucle que lee N choferes y acumula el total\nprint(f\"{total:.2f}\")\n",
     rewardXp: 20,
+    hint: "Por cada chofer (N veces) tenés que leer DOS valores (horas y valor_hora) y sumar horas*valor_hora a total.",
     compute: (ls) => {
       const n = Number(ls[0]);
       let idx = 1;
@@ -634,6 +667,7 @@ const condicionales: SeedExercise[] = [
     starterCode:
       "n = int(input())\ntotal = 0.0\n# completa el bucle que lee N piezas y acumula el total\nprint(f\"{total:.2f}\")\n",
     rewardXp: 20,
+    hint: "Igual que el ejercicio de los choferes: por cada pieza (N veces) leé largo y peso_por_metro, y sumale largo*peso_por_metro a total.",
     compute: (ls) => {
       const n = Number(ls[0]);
       let idx = 1;
@@ -690,6 +724,7 @@ const condicionales: SeedExercise[] = [
       "Leé un número N (con input()). Imprimí un triángulo de N filas: en la fila i, los primeros i números pares (2, 4, 6, ...) separados por espacio. Por ejemplo, para N=3:\n2\n2 4\n2 4 6",
     starterCode: "n = int(input())\n# completa el bucle\n",
     rewardXp: 20,
+    hint: "Necesitas un bucle for i in range(1, n+1) por fila, y DENTRO otro bucle for j in range(1, i+1) que vaya juntando 2*j en una lista para imprimir esa fila.",
     compute: (ls) => {
       const n = Number(ls[0]);
       const rows: string[] = [];
@@ -712,6 +747,7 @@ const condicionales: SeedExercise[] = [
       "Leé un número N (con input()). Imprimí un triángulo de N filas, esta vez decreciente: la primera fila tiene N números pares, y cada fila siguiente tiene uno menos, hasta llegar a 1. Por ejemplo, para N=3:\n2 4 6\n2 4\n2",
     starterCode: "n = int(input())\n# completa el bucle\n",
     rewardXp: 20,
+    hint: "Es como el triangulo ascendente, pero la fila i tiene (n - i + 1) numeros pares en vez de i. La cantidad va bajando a medida que i sube.",
     compute: (ls) => {
       const n = Number(ls[0]);
       const rows: string[] = [];
@@ -735,6 +771,7 @@ const condicionales: SeedExercise[] = [
       "Leé un monto en pesos (entero, con input()). Calculá cuántos billetes de 500, 100, 50, 20, 10, 5, 2 y 1 se necesitan para pagarlo exactamente, usando la menor cantidad posible de billetes (de mayor a menor denominación). Imprimí las ocho cantidades separadas por espacio, en ese orden.",
     starterCode: "monto = int(input())\n# completa la logica\n",
     rewardXp: 20,
+    hint: "Es la misma idea del ejercicio de billetes de 100/10/1, pero con una lista de denominaciones [500,100,50,20,10,5,2,1] y un bucle que las recorra en orden.",
     compute: (ls) => {
       const denoms = [500, 100, 50, 20, 10, 5, 2, 1];
       let n = Number(ls[0]);
@@ -757,6 +794,7 @@ const condicionales: SeedExercise[] = [
       "Un número es múltiplo de 3 si la suma de sus dígitos también es múltiplo de 3. Leé un número entero (con input()), calculá la suma de sus dígitos, y determiná si el número original es múltiplo de 3. Imprimí 'es multiplo de 3' o 'no es multiplo de 3'.",
     starterCode: "n = int(input())\n# completa la logica\n",
     rewardXp: 15,
+    hint: "Convertí n a texto con str(n) y recorré cada caracter con un for, sumando int(caracter) a un acumulador. Al final fijate si ese acumulador es multiplo de 3.",
     compute: (ls) => {
       const n = Math.abs(Number(ls[0]));
       const s = String(n)
@@ -782,6 +820,7 @@ const subacciones: SeedExercise[] = [
       "Escribí una función cuadrado(n) que reciba un número y devuelva su cuadrado. Después, en el programa principal, leé un número con input(), llamá a la función, e imprimí el resultado.",
     starterCode: "def cuadrado(n):\n    # completa la funcion\n    pass\n\nn = int(input())\nprint(cuadrado(n))\n",
     rewardXp: 10,
+    hint: "La funcion tiene que hacer return n * n (no print, return, porque despues la usamos adentro de otra funcion).",
     compute: (ls) => {
       const n = Number(ls[0]);
       return String(n * n);
@@ -800,6 +839,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def suma_digitos(n):\n    # completa la funcion\n    pass\n\nn = int(input())\nprint(suma_digitos(n))\n",
     rewardXp: 15,
+    hint: "Convertí n a texto con str(n), recorré cada caracter con un for, y sumá int(caracter) a un acumulador que despues devolvés con return.",
     compute: (ls) => {
       const n = Number(ls[0]);
       return String(
@@ -821,6 +861,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def minimo(a, b, c):\n    # completa la funcion\n    pass\n\nn = int(input())\nfor _ in range(n):\n    a = int(input())\n    b = int(input())\n    c = int(input())\n    print(minimo(a, b, c))\n",
     rewardXp: 15,
+    hint: "La funcion es simplemente return min(a, b, c). El programa principal ya tiene armado el bucle que repite N veces.",
     compute: (ls) => {
       const n = Number(ls[0]);
       let idx = 1;
@@ -847,6 +888,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def clave(x):\n    # completa la funcion\n    pass\n\nn = int(input())\nfor _ in range(n):\n    x = int(input())\n    print(clave(x))\n",
     rewardXp: 20,
+    hint: "Si x < 0, return -1. Si no, sumá los digitos de x (como en el ejercicio de suma_digitos) y devolvé esa suma % 7.",
     compute: (ls) => {
       const clave = (x: number) => {
         if (x < 0) return -1;
@@ -871,6 +913,7 @@ const subacciones: SeedExercise[] = [
       "Escribí una función es_digito(c) que reciba un carácter (un string de longitud 1) y devuelva True si es un dígito ('0' a '9'), o False en caso contrario. En el programa principal, leé un carácter con input() e imprimí el resultado de llamar a la función.",
     starterCode: "def es_digito(c):\n    # completa la funcion\n    pass\n\nc = input()\nprint(es_digito(c))\n",
     rewardXp: 10,
+    hint: "Python ya tiene un metodo para esto: return c.isdigit().",
     compute: (ls) => {
       const ch = ls[0];
       return ch.length === 1 && ch >= "0" && ch <= "9" ? "True" : "False";
@@ -888,6 +931,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def descuento(unidades, precio):\n    # completa la funcion\n    pass\n\nunidades = int(input())\nprecio = float(input())\nprint(f\"{descuento(unidades, precio):.2f}\")\n",
     rewardXp: 15,
+    hint: "Primero fijate si unidades > 12 (10%), despues si unidades > 6 (4%), si no 0%. El descuento es unidades * precio * tasa.",
     compute: (ls) => {
       const [unidades, precio] = ls.map(Number);
       let tasa = 0;
@@ -909,6 +953,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def mostrar_es_digito(c):\n    # completa el procedimiento (usa print, no return)\n    pass\n\nc = input()\nmostrar_es_digito(c)\n",
     rewardXp: 10,
+    hint: "Es lo mismo que es_digito, pero en vez de 'return c.isdigit()' hacé 'print(c.isdigit())'.",
     compute: (ls) => {
       const ch = ls[0];
       return ch.length === 1 && ch >= "0" && ch <= "9" ? "True" : "False";
@@ -926,6 +971,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def intercambiar(a, b):\n    # completa la funcion (devuelve una tupla)\n    pass\n\na = int(input())\nb = int(input())\nnuevo_a, nuevo_b = intercambiar(a, b)\nprint(nuevo_a, nuevo_b)\n",
     rewardXp: 15,
+    hint: "La funcion es return (b, a) -- ojo que esta al reves que (a, b), ese es justo el truco del intercambio.",
     compute: (ls) => {
       const [a, b] = ls.map(Number);
       return `${b} ${a}`;
@@ -943,6 +989,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def mostrar_0():\n    # completa: imprime el 0 en grande (5 lineas)\n    pass\n\ndef mostrar_1():\n    # completa: imprime el 1 en grande (5 lineas)\n    pass\n\ndef mostrar_9():\n    # completa: imprime el 9 en grande (5 lineas)\n    pass\n\nd = input()\nif d == '0':\n    mostrar_0()\nelif d == '1':\n    mostrar_1()\nelif d == '9':\n    mostrar_9()\nelse:\n    print('no disponible')\n",
     rewardXp: 20,
+    hint: "Cada procedimiento es simplemente 5 print(), uno por cada fila de la grilla de ESE digito que te dimos en la consigna. Copialas tal cual, con las mismas cantidades de espacios y asteriscos.",
     compute: (ls) => {
       const art: Record<string, string[]> = {
         "0": ["***", "* *", "* *", "* *", "***"],
@@ -966,6 +1013,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "# Grilla de cada digito (5 filas x 3 columnas). No la modifiques.\nGRILLA = {\n    '0': ['***', '* *', '* *', '* *', '***'],\n    '1': ['  *', '  *', '  *', '  *', '  *'],\n    '2': ['***', '  *', '***', '*  ', '***'],\n    '3': ['***', '  *', '***', '  *', '***'],\n    '4': ['* *', '* *', '***', '  *', '  *'],\n    '5': ['***', '*  ', '***', '  *', '***'],\n    '6': ['***', '*  ', '***', '* *', '***'],\n    '7': ['***', '  *', '  *', '  *', '  *'],\n    '8': ['***', '* *', '***', '* *', '***'],\n    '9': ['***', '* *', '***', '  *', '***'],\n}\n\ndef mostrar_nro(d):\n    # completa: imprime las 5 filas de GRILLA[d]\n    pass\n\nd = input()\nmostrar_nro(d)\n",
     rewardXp: 15,
+    hint: "Usá un for fila in GRILLA[d]: print(fila). No hace falta escribir 5 print() como en el ejercicio anterior.",
     compute: (ls) => {
       const art: Record<string, string[]> = {
         "0": ["***", "* *", "* *", "* *", "***"],
@@ -995,6 +1043,7 @@ const subacciones: SeedExercise[] = [
     starterCode:
       "def sumar(a, b):\n    # completa la funcion\n    pass\n\ndef restar(a, b):\n    # completa la funcion\n    pass\n\ndef multiplicar(a, b):\n    # completa la funcion\n    pass\n\ndef dividir(a, b):\n    # completa la funcion\n    pass\n\nopcion = int(input())\na = int(input())\nb = int(input())\nif opcion == 1:\n    print(sumar(a, b))\nelif opcion == 2:\n    print(restar(a, b))\nelif opcion == 3:\n    print(multiplicar(a, b))\nelif opcion == 4:\n    print(f\"{dividir(a, b):.2f}\")\n",
     rewardXp: 20,
+    hint: "Cada funcion hace una sola cuenta: return a + b, return a - b, return a * b, return a / b. El programa principal ya elige cual llamar.",
     compute: (ls) => {
       const [op, a, b] = ls.map(Number);
       if (op === 1) return String(a + b);
@@ -1043,7 +1092,7 @@ async function main() {
         starterCode: exSpec.starterCode,
         language: "python",
         rewardXp: exSpec.rewardXp,
-        hint: exSpec.hint ?? null,
+        hint: exSpec.hint,
         unitId: unit.id,
       };
       const exercise = existing

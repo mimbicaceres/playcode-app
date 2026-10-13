@@ -18,23 +18,29 @@ interface CodeExerciseViewProps {
   onRefreshContent?: () => Promise<void>;
 }
 
-function buildErrorMessage(results: GradedTestCaseResult[], testCases: Exercise['testCases']): string {
+// La devolucion de error es propia de cada ejercicio: usa la pista (hint)
+// que se escribio para esa consigna especifica, en vez de mostrarle al
+// alumno el traceback crudo de Python (que no le dice nada util a alguien
+// que recien esta aprendiendo). Esta pista reemplaza por completo lo que
+// Pyodide reporta como error tecnico.
+function buildErrorMessage(exercise: Exercise, results: GradedTestCaseResult[]): string {
+  const hintSuffix = exercise.hint ? ` Pista: ${exercise.hint}` : '';
   const failedVisible = results.find((r) => !r.passed && !r.isHidden);
   if (failedVisible) {
-    const testCase = testCases?.find((t) => t.id === failedVisible.testCaseId);
+    const testCase = exercise.testCases?.find((t) => t.id === failedVisible.testCaseId);
     const inputPart = testCase?.input ? ` Con la entrada "${testCase.input.replace(/\n/g, ', ')}"` : ' En este caso';
     if (failedVisible.timedOut) {
-      return `${inputPart}, tu código no terminó a tiempo. Revisá si tiene un bucle infinito.`;
+      return `${inputPart}, tu código no terminó a tiempo. Revisá si tiene un bucle infinito.${hintSuffix}`;
     }
     if (failedVisible.stderr) {
-      return `${inputPart}, tu código tuvo un error: ${failedVisible.stderr}`;
+      return `${inputPart}, tu código tuvo un error al ejecutarse y no llegó a dar un resultado.${hintSuffix}`;
     }
-    return `${inputPart}, tu código imprimió "${failedVisible.actualOutput}" pero se esperaba "${failedVisible.expectedOutput}". Revisá tu lógica.`;
+    return `${inputPart}, tu código imprimió "${failedVisible.actualOutput}" pero se esperaba "${failedVisible.expectedOutput}".${hintSuffix}`;
   }
   if (results.some((r) => !r.passed)) {
-    return 'Tu código funciona con el ejemplo, pero no con otros casos. Revisá que tu solución funcione para cualquier valor, no solo para el que ves acá.';
+    return `Tu código funciona con el ejemplo, pero no con otros casos. Revisá que tu solución funcione para cualquier valor, no solo para el que ves acá.${hintSuffix}`;
   }
-  return 'Algo no salió bien. Revisá tu código e intentá de nuevo.';
+  return `Algo no salió bien. Revisá tu código e intentá de nuevo.${hintSuffix}`;
 }
 
 export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
@@ -79,7 +85,7 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
         setShowSuccessModal(true);
         onExerciseCompleted?.();
       } else {
-        setErrorMessage(buildErrorMessage(result.results, exercise.testCases));
+        setErrorMessage(buildErrorMessage(exercise, result.results));
         setShowErrorModal(true);
       }
     } catch (err) {
