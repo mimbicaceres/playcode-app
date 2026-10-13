@@ -32,6 +32,8 @@ import { ExerciseCodingView } from './components/ExerciseCodingView';
 import { CodeExerciseView } from './components/CodeExerciseView';
 import { ReportsAnalyticsView } from './components/ReportsAnalyticsView';
 import { StudentProfileView } from './components/StudentProfileView';
+import { TeacherProfileView } from './components/TeacherProfileView';
+import { TeacherExerciseView } from './components/TeacherExerciseView';
 import { TeacherHomeView } from './components/TeacherHomeView';
 import { TeacherStudentsView } from './components/TeacherStudentsView';
 
@@ -337,6 +339,18 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     ? buildTeacherCourses(teaching, dynamicCourseContent, studentProgressByCourse)
     : isDemoTeacher ? demo.teacherCourses : [];
   const selectedTeacherCourse = teacherCourses.find((c) => c.id === teacherCourseId) ?? null;
+  // Curso real dinamico que el docente esta viendo (si corresponde): le
+  // permite hacer click en las unidades para leer las consignas, solo
+  // lectura (nunca puede resolver ni enviar un ejercicio).
+  const teacherDynamicCourse = isRealTeacher && selectedTeacherCourse && dynamicCourseContent.has(selectedTeacherCourse.course.id)
+    ? selectedTeacherCourse.course
+    : null;
+  const teacherActiveUnit = teacherDynamicCourse
+    ? teacherDynamicCourse.units.find((u) => u.id === selectedUnit?.id) ?? teacherDynamicCourse.units[0] ?? null
+    : null;
+  const teacherActiveExercise = teacherActiveUnit
+    ? teacherActiveUnit.exercises.find((e) => e.id === selectedExerciseId) ?? teacherActiveUnit.exercises[0] ?? null
+    : null;
   // Teacher "Ver curso": selects the course and opens the existing course view (read-only).
   const openTeacherCourse = (teacherCourse: TeacherCourseRecord) => {
     if (teacherCourse.id !== teacherCourseId) setProgressStudentId(null); // a student from another course does not carry over
@@ -450,6 +464,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
                 : undefined}
               teacherStudents={selectedTeacherCourse?.students ?? []}
               onViewStudentProgress={openStudentProgress}
+              onSelectUnit={teacherDynamicCourse ? setSelectedUnit : undefined}
             />
           ) : (
             <CourseRoadmapView
@@ -470,13 +485,26 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           </div>
         )}
 
-        {activeView === 'unit_detail' && !isRealStudent && (
+        {activeView === 'unit_detail' && !isRealStudent && !teacherDynamicCourse && (
           <UnitDetailView
             onNavigate={setCurrentView}
             onSelectExercise={(exId: string) => {
               setSelectedExerciseId(exId);
               setCurrentView('exercise');
             }}
+          />
+        )}
+
+        {activeView === 'unit_detail' && teacherDynamicCourse && teacherActiveUnit && (
+          <UnitDetailView
+            onNavigate={setCurrentView}
+            onSelectExercise={(exId: string) => {
+              setSelectedExerciseId(exId);
+              setCurrentView('exercise');
+            }}
+            unit={teacherActiveUnit}
+            course={teacherDynamicCourse}
+            readOnly
           />
         )}
 
@@ -492,12 +520,21 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           />
         )}
 
-        {activeView === 'exercise' && !isRealStudent && (
+        {activeView === 'exercise' && !isRealStudent && !teacherDynamicCourse && (
           <ExerciseCodingView
             onNavigate={setCurrentView}
             onAddXp={handleAddXp}
             currentExerciseId={selectedExerciseId}
             onExerciseCompleted={handleExerciseCompleted}
+          />
+        )}
+
+        {activeView === 'exercise' && teacherDynamicCourse && teacherActiveUnit && teacherActiveExercise && (
+          <TeacherExerciseView
+            onNavigate={setCurrentView}
+            course={teacherDynamicCourse}
+            unit={teacherActiveUnit}
+            exercise={teacherActiveExercise}
           />
         )}
 
@@ -542,7 +579,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           )
         )}
 
-               {activeView === 'profile' && viewUser && (
+               {activeView === 'profile' && viewUser && !isRealTeacher && (
           <StudentProfileView
             user={viewUser}
             badges={isDemo ? BADGES : REAL_BADGES}
@@ -551,6 +588,15 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
               setSelectedCourse(course);
               setCurrentView('course_roadmap');
             }}
+            onUpdateAvatar={handleUpdateAvatar}
+            onNavigate={setCurrentView}
+          />
+        )}
+
+        {activeView === 'profile' && viewUser && isRealTeacher && (
+          <TeacherProfileView
+            user={viewUser}
+            courses={teacherCourses}
             onUpdateAvatar={handleUpdateAvatar}
             onNavigate={setCurrentView}
           />

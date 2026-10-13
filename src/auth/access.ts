@@ -14,7 +14,7 @@ const REAL_ACCESS: Record<ScreenView, Access> = {
   course_roadmap: ['student', 'teacher'],
   unit_detail: ['student'],
   exercise: ['student'],
-  profile: ['student'],
+  profile: ['student', 'teacher'],
   // Admin: general report; teacher: report per course; student: own progress (not in navbar).
   reports: ['student', 'teacher', 'admin'],
   teacher_dashboard: ['teacher'],

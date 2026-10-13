@@ -71,12 +71,17 @@ const renderUnit = (unit: Unit, index: number) => {
     // Teacher: every unit is shown the same way (no student progress/locks).
     // Modo docente: siempre muestra la unidad sin bloqueos ni progreso del estudiante
 if (isTeacher) {
+      const clickable = !!onSelectUnit;
       return (
-        <div key={unit.id} className="relative z-10 flex flex-col items-center mb-12">
-          <div className="w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-md border-4 border-white z-10 mb-2 font-heading font-bold text-lg">
+        <div
+          key={unit.id}
+          onClick={clickable ? () => { onSelectUnit(unit); onNavigate('unit_detail'); } : undefined}
+          className={`relative z-10 flex flex-col items-center mb-12 ${clickable ? 'cursor-pointer group' : ''}`}
+        >
+          <div className={`w-14 h-14 rounded-full bg-[#2563eb] text-white flex items-center justify-center shadow-md border-4 border-white z-10 mb-2 font-heading font-bold text-lg ${clickable ? 'transition-transform group-hover:scale-110' : ''}`}>
             {unit.number}
           </div>
-          <div className="soft-card rounded-2xl p-5 border-blue-100 w-full max-w-sm text-center shadow-xs">
+          <div className={`soft-card rounded-2xl p-5 border-blue-100 w-full max-w-sm text-center shadow-xs ${clickable ? 'group-hover:border-blue-300 transition-colors' : ''}`}>
             <span className="text-[11px] font-bold text-[#2563eb] uppercase tracking-wider">{unit.title}</span>
             <h3 className="font-heading font-bold text-lg text-[#0b1c30]">{unit.subtitle}</h3>
             <p className="text-xs text-[#434655] mt-1">{unit.description}</p>
@@ -84,6 +89,11 @@ if (isTeacher) {
               <span className="material-symbols-outlined text-sm">assignment</span>
               {unit.exercises.length} actividades
             </p>
+            {clickable && (
+              <p className="text-[11px] font-bold text-blue-600 mt-2 flex items-center justify-center gap-1">
+                Ver consignas <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </p>
+            )}
           </div>
         </div>
       );

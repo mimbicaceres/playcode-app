@@ -8,6 +8,11 @@ interface UnitDetailViewProps {
   // de ejemplo de abajo. Sin ellos, el componente se comporta como antes.
   unit?: Unit;
   course?: Course;
+  // Docente: puede abrir cualquier ejercicio para leer la consigna, nunca
+  // resolverlo. El estado (completado/activo/bloqueado) es el del docente
+  // mismo (sin progreso propio), asi que no tiene sentido mostrarlo ni
+  // bloquear el acceso.
+  readOnly?: boolean;
 }
 
 type ExerciseStatus = 'completed' | 'active' | 'locked';
@@ -32,7 +37,7 @@ const DEMO_UNIT_EXERCISES: UnitExercise[] = [
  * Detalle de una unidad: cabecera, objetivos con progreso y ejercicios.
  * Pensada para verse completa en pantalla (sin desplazarse) en escritorio.
  */
-export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSelectExercise, unit, course }) => {
+export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSelectExercise, unit, course, readOnly }) => {
   const UNIT_EXERCISES: UnitExercise[] = unit
     ? unit.exercises.map((exercise, index) => ({
         id: exercise.id,
@@ -111,15 +116,17 @@ export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSe
       {/* Row 3: exercises (grow to fill the screen height, with a cap) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch lg:flex-1 lg:max-h-[320px]">
         {UNIT_EXERCISES.map((exercise) => {
-          const isCompleted = exercise.status === 'completed';
-          const isActive = exercise.status === 'active';
-          const isLocked = exercise.status === 'locked';
+          const isCompleted = !readOnly && exercise.status === 'completed';
+          const isActive = !readOnly && exercise.status === 'active';
+          const isLocked = !readOnly && exercise.status === 'locked';
 
-          const cardClass = isActive
-            ? 'bg-white border-2 border-[#2563eb] shadow-[0px_4px_16px_rgba(37,99,235,0.08)]'
-            : isCompleted
-              ? 'bg-white border-l-4 border-l-[#10B981] border-t border-r border-b border-slate-200 shadow-sm'
-              : 'bg-slate-50/80 opacity-60 border border-dashed border-slate-300';
+          const cardClass = readOnly
+            ? 'bg-white border border-slate-200 shadow-sm hover:border-blue-300 transition-colors'
+            : isActive
+              ? 'bg-white border-2 border-[#2563eb] shadow-[0px_4px_16px_rgba(37,99,235,0.08)]'
+              : isCompleted
+                ? 'bg-white border-l-4 border-l-[#10B981] border-t border-r border-b border-slate-200 shadow-sm'
+                : 'bg-slate-50/80 opacity-60 border border-dashed border-slate-300';
 
           return (
             <div key={exercise.id} className={`rounded-2xl p-4 flex flex-col gap-2 min-h-[190px] ${cardClass}`}>
@@ -143,15 +150,17 @@ export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSe
               <div className="flex-1 flex items-center justify-center py-1">
                 <div
                   className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${
-                    isCompleted
-                      ? 'bg-emerald-50 text-[#10B981] border-emerald-200'
-                      : isActive
-                        ? 'bg-blue-50 text-[#2563eb] border-blue-200 animate-pulse'
-                        : 'bg-slate-200 text-slate-500 border-slate-300'
+                    readOnly
+                      ? 'bg-blue-50 text-[#2563eb] border-blue-200'
+                      : isCompleted
+                        ? 'bg-emerald-50 text-[#10B981] border-emerald-200'
+                        : isActive
+                          ? 'bg-blue-50 text-[#2563eb] border-blue-200 animate-pulse'
+                          : 'bg-slate-200 text-slate-500 border-slate-300'
                   }`}
                 >
                   <span className="material-symbols-outlined text-3xl fill">
-                    {isCompleted ? 'check_circle' : isActive ? 'play_arrow' : 'lock'}
+                    {readOnly ? 'description' : isCompleted ? 'check_circle' : isActive ? 'play_arrow' : 'lock'}
                   </span>
                 </div>
               </div>
@@ -178,7 +187,7 @@ export const UnitDetailView: React.FC<UnitDetailViewProps> = ({ onNavigate, onSe
                       : 'bg-slate-100 hover:bg-slate-200 text-[#434655]'
                   }`}
                 >
-                  <span>{isActive ? 'Resolver ejercicio' : 'Revisar solución'}</span>
+                  <span>{readOnly ? 'Ver consigna' : isActive ? 'Resolver ejercicio' : 'Revisar solución'}</span>
                   {isActive && <span className="material-symbols-outlined text-sm">play_arrow</span>}
                 </button>
               )}

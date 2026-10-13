@@ -36,7 +36,7 @@ const COURSE = {
   slug: "python-fundamentos",
   title: "Python — Fundamentos",
   description:
-    "Ejercicios de algoritmos y estructuras de datos (basados en la practica de AED - UTN FRRE), reescritos y orientados a Python.",
+    "Aprendé Python resolviendo ejercicios de lógica y programación, de menor a mayor dificultad: variables, condicionales, bucles y funciones.",
 };
 
 const lines = (s: string) => (s.length > 0 ? s.split("\n") : []);
