@@ -29,6 +29,10 @@ model User {
   grade        String?
   avatarUrl    String?
   streakDays   Int      @default(0)
+  // Ultima vez que el usuario intento un ejercicio (exito o no). Se usa para
+  // calcular la racha con huso horario de Argentina, independiente de
+  // updatedAt (que cambia con cualquier edicion del perfil).
+  lastActivityAt DateTime?
   totalXp      Int      @default(0)
   // Deactivated accounts cannot sign in (set by an admin).
   isActive     Boolean  @default(true)

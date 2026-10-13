@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { Request, Response } from 'express';
 import { CODIX_CATALOG } from '../../lib/codixCatalog';
 import { gradeSubmission, ReportedOutput } from '../../lib/codeGrader';
+import { nextStreakOnActivity } from '../../lib/streak';
 
 interface AttemptContext {
   rewardXp: number;
@@ -56,20 +57,21 @@ export async function registerAttempt(
     },
   });
 
-  // Update user XP and streak - only on first successful completion.
+  // Cada intento (exito o no) cuenta como actividad para la racha, con
+  // huso horario de Argentina (ver server/src/lib/streak.ts). totalXp solo
+  // sube con intentos exitosos.
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('User not found');
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const consecutive = user.updatedAt.toDateString() === yesterday.toDateString();
-  const newStreak = consecutive ? user.streakDays + 1 : 1;
+  const now = new Date();
+  const newStreak = nextStreakOnActivity(user.streakDays, user.lastActivityAt, now);
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       totalXp: { increment: success ? rewardXp : 0 },
       streakDays: newStreak,
+      lastActivityAt: now,
     },
   });
 

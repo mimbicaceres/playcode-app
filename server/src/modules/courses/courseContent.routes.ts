@@ -14,7 +14,7 @@ router.get('/', requireAuth, requireRole('admin', 'teacher'), async (_req: Reque
       include: {
         units: {
           orderBy: { order: 'asc' },
-          include: { exercises: { select: { id: true } } },
+          include: { exercises: { select: { id: true, title: true }, orderBy: { order: 'asc' } } },
         },
       },
     });
@@ -27,7 +27,11 @@ router.get('/', requireAuth, requireRole('admin', 'teacher'), async (_req: Reque
         description: course.description,
         unitsCount: course.units.length,
         activitiesCount: course.units.reduce((sum, unit) => sum + unit.exercises.length, 0),
-        units: course.units.map((unit) => ({ title: unit.title ?? '', activities: unit.exercises.length })),
+        units: course.units.map((unit) => ({
+          title: unit.title ?? '',
+          activities: unit.exercises.length,
+          exercises: unit.exercises.map((exercise) => ({ id: exercise.id, title: exercise.title ?? '' })),
+        })),
       }));
 
     return res.status(200).json({ courses: result });

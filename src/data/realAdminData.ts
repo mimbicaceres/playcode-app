@@ -4,6 +4,8 @@ import { CODIX_CATALOG, countActivities, findCatalogCourse } from './codixCatalo
 
 const fullName = (user: ApiUser) => `${user.name} ${user.lastName}`;
 const statusFor = (active: boolean): 'Activo' | 'Inactivo' => (active ? 'Activo' : 'Inactivo');
+const formatLastActivity = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : undefined;
 
 // Real /admin data (institute management), built from the backend users
 // (GET /api/users), the CODIX catalog (static courses) and the real dynamic
@@ -38,6 +40,7 @@ export function buildAdminInstituteData(users: ApiUser[], dbCourses: AdminCourse
           : undefined,
         assignedCourses: user.role === 'teacher' ? user.courseIds.length : undefined,
         status: user.isActive ? 'Activo' : 'Inactivo',
+        lastActivity: formatLastActivity(user.lastActivityAt),
         firstName: user.name,
         lastName: user.lastName,
         school: user.school ?? undefined,
@@ -77,15 +80,26 @@ export function buildAdminInstituteData(users: ApiUser[], dbCourses: AdminCourse
         };
       }),
     ],
-    activities: activeCatalogCourses.flatMap((course) => course.units.flatMap((unit) => unit.exercises.map((exercise) => ({
-      id: exercise.id,
-      name: exercise.title,
-      courseName: course.title,
-      unitName: `${unit.title} — ${unit.subtitle}`,
-      type: 'Ejercicio práctico',
-      difficulty: '—',
-      status: 'Activo' as const,
-    })))),
+    activities: [
+      ...activeCatalogCourses.flatMap((course) => course.units.flatMap((unit) => unit.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.title,
+        courseName: course.title,
+        unitName: `${unit.title} — ${unit.subtitle}`,
+        type: 'Ejercicio práctico',
+        difficulty: '—',
+        status: 'Activo' as const,
+      })))),
+      ...activeDbCourses.flatMap((course) => course.units.flatMap((unit) => unit.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.title,
+        courseName: course.title ?? course.id,
+        unitName: unit.title,
+        type: 'Ejercicio de código',
+        difficulty: '—',
+        status: 'Activo' as const,
+      })))),
+    ],
     gamification: { xpMultiplier: 1, baseXp: 0, streakBonusXp: 0 },
   };
 }
