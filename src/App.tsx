@@ -97,16 +97,22 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
-    // Fetch user profile then their assigned courses
     fetchMe(token)
-      .then(({ user: apiUser }) => {
-        setUser(toUserProfile(apiUser));
-        return fetchMyCourses(token);
-      })
-      .then(({ courseIds }) => setMyCourseIds(courseIds))
+      .then(({ user: apiUser }) => setUser(toUserProfile(apiUser)))
       .catch(() => clearToken())
       .finally(() => setAuthChecked(true));
   }, []);
+
+  // Vuelve a pedir los cursos asignados cada vez que el usuario navega (no
+  // solo al iniciar sesion): si el admin asigna un curso nuevo mientras la
+  // sesion ya esta abierta, se ve sin tener que cerrar sesion y reingresar.
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token || !user) return;
+    fetchMyCourses(token)
+      .then(({ courseIds }) => setMyCourseIds(courseIds))
+      .catch(() => {});
+  }, [currentView, user?.id]);
 
   const isTeacherSession = !isDemo && user?.role === 'teacher';
   useEffect(() => {
@@ -299,8 +305,11 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     ? visibleCourses.find((c) => c.id === selectedCourse?.id) ?? visibleCourses[0] ?? null
     : null;
   const isDynamicCourseActive = !!activeStudentCourse && dynamicCourseContent.has(activeStudentCourse.id);
+  // Se re-resuelve por id contra el curso recien refrescado (en vez de usar
+  // directamente el objeto guardado en selectedUnit, que queda desactualizado
+  // despues de completar un ejercicio y volver a pedir el contenido).
   const activeUnit = isDynamicCourseActive
-    ? selectedUnit ?? activeStudentCourse?.units[0] ?? null
+    ? activeStudentCourse?.units.find((u) => u.id === selectedUnit?.id) ?? activeStudentCourse?.units[0] ?? null
     : null;
   const activeExercise = activeUnit
     ? activeUnit.exercises.find((e) => e.id === selectedExerciseId) ?? activeUnit.exercises[0] ?? null
