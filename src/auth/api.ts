@@ -17,6 +17,8 @@ export interface ApiUser {
   // CODIX courses assigned by an administrator.
   courseIds: string[];
   createdAt: string;
+  // Ultimo intento de ejercicio (exito o no); null si nunca hizo ninguno.
+  lastActivityAt: string | null;
 }
 
 export class ApiError extends Error {
@@ -135,6 +137,28 @@ export interface NewTeacherData {
  */
 export function createTeacherRequest(token: string, data: NewTeacherData) {
   return request<{ user: ApiUser }>('/users/teachers', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
+export interface NewStudentData {
+  name: string;
+  lastName: string;
+  email: string;
+  password: string;
+  school?: string;
+  grade?: string;
+}
+
+/**
+ * Crea un nuevo usuario con rol de alumno, sin que el alumno se autorregistre.
+ * @param token Token JWT del administrador.
+ * @param data Datos del alumno a crear.
+ */
+export function createStudentRequest(token: string, data: NewStudentData) {
+  return request<{ user: ApiUser }>('/users/students', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -360,7 +384,7 @@ export interface AdminCourseSummary {
   description: string | null;
   unitsCount: number;
   activitiesCount: number;
-  units: { title: string; activities: number }[];
+  units: { title: string; activities: number; exercises: { id: string; title: string }[] }[];
 }
 
 export async function fetchAdminCourses(token: string): Promise<AdminCourseSummary[]> {

@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { toPublicUser, withCourses } from "../../lib/users";
 import { isAssignableCourseId } from "../../lib/codixCourses";
-import { createTeacher, EmailAlreadyRegisteredError } from "../auth/auth.service";
+import { createStudent, createTeacher, EmailAlreadyRegisteredError } from "../auth/auth.service";
 import { isValidEmail, normalizeEmail, validateNewUserInput } from "../auth/auth.validation";
 import { getUserProgressByCourse } from "../progress/progress.service";
 
@@ -98,6 +98,27 @@ export async function createTeacherUser(req: Request, res: Response): Promise<Re
     }
 
     console.error("createTeacherUser error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// Admin only. Any "role" sent in the body is ignored: the account is always a student.
+export async function createStudentUser(req: Request, res: Response): Promise<Response> {
+  const validation = validateNewUserInput(req.body);
+
+  if (!validation.ok) {
+    return res.status(400).json({ error: validation.error });
+  }
+
+  try {
+    const user = await createStudent(validation.data);
+    return res.status(201).json({ user });
+  } catch (error) {
+    if (error instanceof EmailAlreadyRegisteredError) {
+      return res.status(409).json({ error: error.message });
+    }
+
+    console.error("createStudentUser error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

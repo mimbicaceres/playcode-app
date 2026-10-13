@@ -7,6 +7,7 @@ import {
 import { buildAdminInstituteData } from '../data/realAdminData';
 import { AdminInstituteActions, AdminInstituteView } from './AdminInstituteView';
 import { CreateTeacherModal } from './Modals/CreateTeacherModal';
+import { CreateStudentModal } from './Modals/CreateStudentModal';
 
 // Message for a failed admin action (null → success).
 /**
@@ -40,6 +41,8 @@ const [loadError, setLoadError] = useState(false);
   const [dbCourses, setDbCourses] = useState<AdminCourseSummary[]>([]);
   /** Controla la visibilidad del modal para crear docentes. */
 const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
+  /** Controla la visibilidad del modal para crear alumnos. */
+  const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false);
   /** Mensaje de éxito que se muestra temporalmente al crear o actualizar datos. */
 const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -86,6 +89,14 @@ const handleTeacherCreated = (teacher: ApiUser) => {
     loadUsers();
   };
 
+  /** Callback invocado cuando se crea un nuevo alumno. */
+  const handleStudentCreated = (student: ApiUser) => {
+    setSuccessMessage(
+      `Alumno ${student.name} ${student.lastName} creado. Ya puede iniciar sesión con ${student.email}.`
+    );
+    loadUsers();
+  };
+
   // Sends a change to the backend and replaces the user with the saved version.
   /**
  * Envía una solicitud de actualización de usuario al backend y actualiza el estado local.
@@ -122,6 +133,7 @@ const saveUser = async (send: (token: string) => Promise<{ user: ApiUser }>): Pr
   /** Acciónes disponibles para la vista de gestión de instituciones. */
 const actions: AdminInstituteActions = {
     createTeacher: () => setIsCreateTeacherOpen(true),
+    createStudent: () => setIsCreateStudentOpen(true),
     updateUser: (id, values) => saveUser((token) => updateUserRequest(token, id, values)),
     setUserActive: (id, isActive) => saveUser((token) => setUserActiveRequest(token, id, isActive)),
     setUserCourses: (id, courseIds) => saveUser((token) => setUserCoursesRequest(token, id, courseIds)),
@@ -174,6 +186,11 @@ const banner = successMessage && (
         isOpen={isCreateTeacherOpen}
         onClose={() => setIsCreateTeacherOpen(false)}
         onCreated={handleTeacherCreated}
+      />
+      <CreateStudentModal
+        isOpen={isCreateStudentOpen}
+        onClose={() => setIsCreateStudentOpen(false)}
+        onCreated={handleStudentCreated}
       />
     </>
   );

@@ -12,6 +12,9 @@ import {
 // message to show, or null on success.
 export interface AdminInstituteActions {
   createTeacher: () => void;
+  // Opcional: si no esta presente, el boton "Crear alumno" no se muestra
+  // (ej. en el panel demo, donde no hace falta por ahora).
+  createStudent?: () => void;
   updateUser: (userId: string, data: UserEditData) => Promise<string | null>;
   setUserActive: (userId: string, isActive: boolean) => Promise<string | null>;
   setUserCourses: (userId: string, courseIds: string[]) => Promise<string | null>;
@@ -233,6 +236,15 @@ const stats = [
                 <option value="teacher">Docentes</option>
                 <option value="admin">Administradores</option>
               </select>
+              {actions.createStudent && (
+                <button
+                  onClick={actions.createStudent}
+                  className="bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-base">add</span>
+                  <span>Crear alumno</span>
+                </button>
+              )}
               <button
                 onClick={actions.createTeacher}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl font-semibold text-xs transition-colors flex items-center gap-1 shadow-xs cursor-pointer whitespace-nowrap"

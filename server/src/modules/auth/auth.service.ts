@@ -133,6 +133,19 @@ export async function createTeacher(input: RegisterInput): Promise<PublicUser> {
   return toPublicUser(user);
 }
 
+// Admin-only (see users.routes.ts): creates a student directly, without the
+// student having to self-register. No token is returned, they sign in
+// through the regular login.
+/**
+ * Crea un nuevo usuario con rol de alumno.
+ * @param input Datos de registro del alumno.
+ * @returns El usuario público creado (sin token, debe iniciar sesión).
+ */
+export async function createStudent(input: RegisterInput): Promise<PublicUser> {
+  const user = await createUserWithRole(input, "student");
+  return toPublicUser(user);
+}
+
 /**
  * Autentica a un usuario y genera un token JWT.
  * @param input Credenciales de inicio de sesión (email y password).

@@ -6,6 +6,7 @@ import {
   listUsers,
   listStudents,
   createTeacherUser,
+  createStudentUser,
   updateUser,
   setUserStatus,
   setUserCourses,
@@ -25,6 +26,7 @@ router.get("/", requireRole("admin"), listUsers);
 // que progressRoutes la resuelva (usersRoutes esta montado primero en app.ts).
 router.get("/:id/progress-by-course", requireRole("teacher", "admin"), getStudentProgressByCourse);
 router.post("/teachers", requireRole("admin"), createTeacherUser);
+router.post("/students", requireRole("admin"), createStudentUser);
 router.patch("/:id", requireRole("admin"), updateUser);
 router.patch("/:id/status", requireRole("admin"), setUserStatus);
 router.put("/:id/courses", requireRole("admin"), setUserCourses);
