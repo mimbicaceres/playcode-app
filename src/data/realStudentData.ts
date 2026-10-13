@@ -68,9 +68,14 @@ export function buildStudentProgressRecord(
 // courses, exercisesSolved and coursePerformance (one bar per course) are
 // real; everything else still has no backend tracking. Never uses mockData:
 // the example version for presentations is DEMO_REPORTS (/demo/alumno/progreso).
-export function buildStudentReports(student: UserProfile, progressByCourse: CourseProgressSummary[] = []): ReportsData {
+export function buildStudentReports(
+  student: UserProfile,
+  progressByCourse: CourseProgressSummary[] = [],
+  weeklyXp: number[] = [],
+): ReportsData {
+  const xpTrend = weeklyXp.length > 0 ? { weeklyXp } : undefined;
   if (progressByCourse.length === 0) {
-    return { ...EMPTY_REPORTS, averageStreakDays: student.streakDays };
+    return { ...EMPTY_REPORTS, averageStreakDays: student.streakDays, xpTrend };
   }
   const exercisesSolved = progressByCourse.reduce((sum, p) => sum + p.completedExercises, 0);
   return {
@@ -82,5 +87,6 @@ export function buildStudentReports(student: UserProfile, progressByCourse: Cour
       percent: progress.progressPercent,
       barClass: BAR_COLORS[index % BAR_COLORS.length],
     })),
+    xpTrend,
   };
 }

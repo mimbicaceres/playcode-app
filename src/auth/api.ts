@@ -553,20 +553,24 @@ export interface CourseProgressSummary {
   }[];
 }
 
-export async function fetchMyProgressByCourse(token: string): Promise<CourseProgressSummary[]> {
-  const { progress } = await request<{ progress: CourseProgressSummary[] }>('/users/me/progress/by-course', {
+// XP ganado por dia (huso Argentina) en los ultimos 7 dias, del mas viejo
+// al mas nuevo. Alimenta "Tendencias de XP & Actividad" en Reportes.
+export interface ProgressByCourseResult {
+  progress: CourseProgressSummary[];
+  weeklyXp: number[];
+}
+
+export async function fetchMyProgressByCourse(token: string): Promise<ProgressByCourseResult> {
+  return request<ProgressByCourseResult>('/users/me/progress/by-course', {
     headers: authHeaders(token),
   });
-  return progress;
 }
 
 // Docente/admin: progreso real de un alumno puntual (solo lectura).
-export async function fetchStudentProgressByCourse(token: string, studentId: string): Promise<CourseProgressSummary[]> {
-  const { progress } = await request<{ progress: CourseProgressSummary[] }>(
-    `/users/${studentId}/progress-by-course`,
-    { headers: authHeaders(token) },
-  );
-  return progress;
+export async function fetchStudentProgressByCourse(token: string, studentId: string): Promise<ProgressByCourseResult> {
+  return request<ProgressByCourseResult>(`/users/${studentId}/progress-by-course`, {
+    headers: authHeaders(token),
+  });
 }
 
 // Fetch student progress from backend

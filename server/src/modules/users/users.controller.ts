@@ -5,7 +5,7 @@ import { toPublicUser, withCourses } from "../../lib/users";
 import { isAssignableCourseId } from "../../lib/codixCourses";
 import { createStudent, createTeacher, EmailAlreadyRegisteredError } from "../auth/auth.service";
 import { isValidEmail, normalizeEmail, validateNewUserInput } from "../auth/auth.validation";
-import { getUserProgressByCourse } from "../progress/progress.service";
+import { getUserProgressByCourse, getWeeklyXpTrend } from "../progress/progress.service";
 
 const isUniqueConstraintError = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
@@ -241,8 +241,11 @@ export async function getStudentProgressByCourse(req: Request, res: Response): P
       }
     }
 
-    const progress = await getUserProgressByCourse(studentId);
-    return res.status(200).json({ progress });
+    const [progress, weeklyXp] = await Promise.all([
+      getUserProgressByCourse(studentId),
+      getWeeklyXpTrend([studentId]),
+    ]);
+    return res.status(200).json({ progress, weeklyXp });
   } catch (error) {
     console.error("getStudentProgressByCourse error:", error);
     return res.status(500).json({ error: "Internal server error" });

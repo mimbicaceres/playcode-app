@@ -42,9 +42,17 @@ export function buildTeacherCourses(
 
 // Reporte de UN curso del docente (scope="course"): barras por unidad,
 // promediando el avance de todos los alumnos del curso en cada unidad.
-export function buildTeacherCourseReport(teacherCourse: TeacherCourseRecord): ReportsData {
+export function buildTeacherCourseReport(teacherCourse: TeacherCourseRecord, weeklyXp: number[] = []): ReportsData {
+  const xpTrend = weeklyXp.length > 0 ? { weeklyXp } : undefined;
   const studentsWithData = teacherCourse.students.filter((s) => s.units.length > 0);
-  if (studentsWithData.length === 0) return EMPTY_REPORTS;
+  if (studentsWithData.length === 0) {
+    return {
+      ...EMPTY_REPORTS,
+      studentsCount: teacherCourse.students.length,
+      activitiesCount: teacherCourse.course.totalLessons,
+      xpTrend,
+    };
+  }
 
   const percentsByUnit = new Map<string, number[]>();
   for (const student of studentsWithData) {
@@ -59,15 +67,29 @@ export function buildTeacherCourseReport(teacherCourse: TeacherCourseRecord): Re
     barClass: BAR_COLORS[index % BAR_COLORS.length],
   }));
   const exercisesSolved = teacherCourse.students.reduce((sum, s) => sum + s.exercisesSolved, 0);
+  const activeStudents = teacherCourse.students.filter((s) => s.exercisesSolved > 0).length;
 
-  return { ...EMPTY_REPORTS, exercisesSolved, coursePerformance };
+  return {
+    ...EMPTY_REPORTS,
+    exercisesSolved,
+    coursePerformance,
+    activeStudents,
+    studentsCount: teacherCourse.students.length,
+    averageProgress: teacherCourse.averageProgress,
+    activitiesCount: teacherCourse.course.totalLessons,
+    xpTrend,
+  };
 }
 
 // Reporte de todos los cursos del docente (scope="teacher"): barras por
 // curso, con el avance promedio de sus alumnos en cada uno.
-export function buildTeacherOverallReport(courses: TeacherCourseRecord[]): ReportsData {
+export function buildTeacherOverallReport(courses: TeacherCourseRecord[], weeklyXp: number[] = []): ReportsData {
+  const xpTrend = weeklyXp.length > 0 ? { weeklyXp } : undefined;
+  const allStudents = getTeacherStudents(courses);
+  const studentsCount = allStudents.length;
   const withData = courses.filter((course) => course.students.some((s) => s.exercisesTotal > 0));
-  if (withData.length === 0) return EMPTY_REPORTS;
+
+  if (withData.length === 0) return { ...EMPTY_REPORTS, studentsCount, xpTrend };
 
   const coursePerformance = withData.map((course, index) => ({
     label: course.name,
@@ -78,8 +100,22 @@ export function buildTeacherOverallReport(courses: TeacherCourseRecord[]): Repor
     (sum, course) => sum + course.students.reduce((s2, s) => s2 + s.exercisesSolved, 0),
     0,
   );
+  const activeStudents = allStudents.filter((s) => s.exercisesSolved > 0).length;
+  const averageProgress = studentsCount > 0
+    ? Math.round(allStudents.reduce((sum, s) => sum + s.overallProgress, 0) / studentsCount)
+    : 0;
+  const activitiesCount = withData.reduce((sum, course) => sum + course.course.totalLessons, 0);
 
-  return { ...EMPTY_REPORTS, exercisesSolved, coursePerformance };
+  return {
+    ...EMPTY_REPORTS,
+    exercisesSolved,
+    coursePerformance,
+    activeStudents,
+    studentsCount,
+    averageProgress,
+    activitiesCount,
+    xpTrend,
+  };
 }
 
 // Students of all the teacher's courses (a student in two courses appears once).

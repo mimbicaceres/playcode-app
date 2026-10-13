@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { dateKeyInArgentina } from '../../lib/streak';
 
 export interface CourseProgressUnitSummary {
   unitId: string;
@@ -129,4 +130,32 @@ export async function getUserProgressByCourse(userId: string): Promise<CoursePro
         units,
       };
     });
+}
+
+/**
+ * XP ganado por dia (huso de Argentina) en los ultimos 7 dias (incluyendo
+ * hoy), sumando entre todos los userIds dados. Devuelve 7 numeros, del dia
+ * mas viejo al mas nuevo. Se basa en ExerciseProgress.completedAt/xpEarned
+ * (no hace falta un modelo nuevo de "historial de actividad").
+ */
+export async function getWeeklyXpTrend(userIds: string[], now: Date = new Date()): Promise<number[]> {
+  if (userIds.length === 0) return new Array(7).fill(0);
+
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const records = await prisma.exerciseProgress.findMany({
+    where: { userId: { in: userIds }, completed: true, completedAt: { gte: sevenDaysAgo } },
+    select: { completedAt: true, xpEarned: true },
+  });
+
+  const dayKeys: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    dayKeys.push(dateKeyInArgentina(new Date(now.getTime() - i * 24 * 60 * 60 * 1000)));
+  }
+  const totals = new Map(dayKeys.map((key) => [key, 0]));
+  for (const record of records) {
+    if (!record.completedAt) continue;
+    const key = dateKeyInArgentina(record.completedAt);
+    if (totals.has(key)) totals.set(key, (totals.get(key) ?? 0) + record.xpEarned);
+  }
+  return dayKeys.map((key) => totals.get(key) ?? 0);
 }

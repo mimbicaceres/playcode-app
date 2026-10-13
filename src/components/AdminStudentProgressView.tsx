@@ -33,7 +33,7 @@ useEffect(() => {
     Promise.all(
       studentIds.map((id) =>
         fetchStudentProgressByCourse(token, id)
-          .then((progress): [string, CourseProgressSummary[]] => [id, progress])
+          .then((result): [string, CourseProgressSummary[]] => [id, result.progress])
           .catch((): [string, CourseProgressSummary[]] => [id, []]),
       ),
     ).then((entries) => setProgressByStudent(new Map(entries)));

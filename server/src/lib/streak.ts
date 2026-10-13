@@ -6,7 +6,9 @@
 const AR_TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 // Clave de fecha (YYYY-MM-DD) de un instante, en el huso de Argentina.
-function dateKeyInArgentina(date: Date): string {
+// Exportada para reutilizarla al agrupar actividad por dia (ej. tendencia
+// semanal de XP en progress.service.ts).
+export function dateKeyInArgentina(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: AR_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' })
     .format(date);
 }

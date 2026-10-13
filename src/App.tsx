@@ -73,7 +73,9 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   // agrupado por curso dinamico. Alimenta la barra de progreso en reportes
   // y en el seguimiento individual del docente.
   const [myProgressByCourse, setMyProgressByCourse] = useState<CourseProgressSummary[]>([]);
+  const [myWeeklyXp, setMyWeeklyXp] = useState<number[]>([]);
   const [studentProgressByCourse, setStudentProgressByCourse] = useState<Map<string, CourseProgressSummary[]>>(new Map());
+  const [studentWeeklyXp, setStudentWeeklyXp] = useState<Map<string, number[]>>(new Map());
   // Real teacher context: the course selected with "Ver curso" (Alumnos, Progreso
   // and Reporte refer to it) and the student opened with "Ver progreso".
   const [teacherCourseId, setTeacherCourseId] = useState<string | null>(null);
@@ -151,7 +153,9 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     }
 
     if (isRealStudentSession) {
-      fetchMyProgressByCourse(token).then(setMyProgressByCourse).catch(() => setMyProgressByCourse([]));
+      fetchMyProgressByCourse(token)
+        .then((result) => { setMyProgressByCourse(result.progress); setMyWeeklyXp(result.weeklyXp); })
+        .catch(() => { setMyProgressByCourse([]); setMyWeeklyXp([]); });
     }
   };
 
@@ -161,20 +165,25 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     const token = getStoredToken();
     if (!token || !isTeacherSession) {
       setStudentProgressByCourse(new Map());
+      setStudentWeeklyXp(new Map());
       return;
     }
     const studentIds = [...new Set(teaching.flatMap((t) => t.students.map((s) => s.id)))];
     if (studentIds.length === 0) {
       setStudentProgressByCourse(new Map());
+      setStudentWeeklyXp(new Map());
       return;
     }
     Promise.all(
       studentIds.map((id) =>
         fetchStudentProgressByCourse(token, id)
-          .then((progress): [string, CourseProgressSummary[]] => [id, progress])
-          .catch((): [string, CourseProgressSummary[]] => [id, []]),
+          .then((result): [string, CourseProgressSummary[], number[]] => [id, result.progress, result.weeklyXp])
+          .catch((): [string, CourseProgressSummary[], number[]] => [id, [], []]),
       ),
-    ).then((entries) => setStudentProgressByCourse(new Map(entries)));
+    ).then((entries) => {
+      setStudentProgressByCourse(new Map(entries.map(([id, progress]) => [id, progress])));
+      setStudentWeeklyXp(new Map(entries.map(([id, , weeklyXp]) => [id, weeklyXp])));
+    });
   }, [isTeacherSession, teaching]);
 
   useEffect(() => {
@@ -330,6 +339,18 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   const activeExercise = activeUnit
     ? activeUnit.exercises.find((e) => e.id === selectedExerciseId) ?? activeUnit.exercises[0] ?? null
     : null;
+
+  // Suma, dia por dia, el XP semanal de un grupo de alumnos (para los
+  // reportes de docente: por curso o de todos sus cursos juntos).
+  const sumWeeklyXp = (studentIds: string[]): number[] => {
+    const totals = new Array(7).fill(0);
+    for (const id of studentIds) {
+      const xp = studentWeeklyXp.get(id);
+      if (!xp) continue;
+      xp.forEach((value, i) => { totals[i] += value; });
+    }
+    return totals;
+  };
 
   const goHome = () => user && navigate(getPathForView(getHomeView(user.role)));
   const openDemo = () => user && navigate(getPathForView(getHomeView(user.role), true));
@@ -570,12 +591,19 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
             // Selected course → report of that course only (per-unit, averaged
             // across its students); no course → all the teacher's courses.
             selectedTeacherCourse ? (
-              <ReportsAnalyticsView data={buildTeacherCourseReport(selectedTeacherCourse)} scope="course" courseName={selectedTeacherCourse.name} />
+              <ReportsAnalyticsView
+                data={buildTeacherCourseReport(selectedTeacherCourse, sumWeeklyXp(selectedTeacherCourse.students.map((s) => s.id)))}
+                scope="course"
+                courseName={selectedTeacherCourse.name}
+              />
             ) : (
-              <ReportsAnalyticsView data={buildTeacherOverallReport(teacherCourses)} scope="teacher" />
+              <ReportsAnalyticsView
+                data={buildTeacherOverallReport(teacherCourses, sumWeeklyXp([...new Set(teacherCourses.flatMap((c) => c.students.map((s) => s.id)))])) }
+                scope="teacher"
+              />
             )
           ) : (
-            <ReportsAnalyticsView data={buildStudentReports(user, myProgressByCourse)} />
+            <ReportsAnalyticsView data={buildStudentReports(user, myProgressByCourse, myWeeklyXp)} />
           )
         )}
 
