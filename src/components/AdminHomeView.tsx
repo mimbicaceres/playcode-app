@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AdminCourseSummary, ApiError, ApiUser, createCourseRequest, createExerciseRequest, createUnitRequest,
-  deleteExerciseRequest, fetchAdminCourseContent, fetchAdminCourses, fetchUsers, getStoredToken, setUserActiveRequest,
-  setUserCoursesRequest, updateExerciseRequest, updateUserRequest,
+  AdminCourseSummary, ApiError, ApiUser, InstituteData, createCourseRequest, createExerciseRequest, createUnitRequest,
+  deleteExerciseRequest, fetchAdminCourseContent, fetchAdminCourses, fetchInstitute, fetchUsers, getStoredToken,
+  setUserActiveRequest, setUserCoursesRequest, updateExerciseRequest, updateInstituteRequest, updateUserRequest,
 } from '../auth/api';
 import { buildAdminInstituteData } from '../data/realAdminData';
 import { AdminInstituteActions, AdminInstituteView } from './AdminInstituteView';
@@ -43,6 +43,8 @@ const [loadError, setLoadError] = useState(false);
 const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
   /** Controla la visibilidad del modal para crear alumnos. */
   const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false);
+  /** Datos generales del instituto (pestaña Configuración). */
+  const [institute, setInstitute] = useState<InstituteData | undefined>(undefined);
   /** Mensaje de éxito que se muestra temporalmente al crear o actualizar datos. */
 const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -74,6 +76,13 @@ useEffect(loadUsers, []);
 
   /** Ejecuta loadCourses una sola vez al montar el componente. */
   useEffect(loadCourses, []);
+
+  /** Carga los datos del instituto una sola vez al montar el componente. */
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    fetchInstitute(token).then(setInstitute).catch(() => {});
+  }, []);
 
   const data = useMemo(() => buildAdminInstituteData(users ?? [], dbCourses), [users, dbCourses]);
 
@@ -147,6 +156,17 @@ const actions: AdminInstituteActions = {
     createExercise: (unitId, exerciseData) => runCourseAction((token) => createExerciseRequest(token, unitId, exerciseData)),
     updateExercise: (exerciseId, exerciseData) => runCourseAction((token) => updateExerciseRequest(token, exerciseId, exerciseData)),
     deleteExercise: (exerciseId) => runCourseAction((token) => deleteExerciseRequest(token, exerciseId)),
+    updateInstitute: async (instituteData) => {
+      const token = getStoredToken();
+      if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
+      try {
+        const updated = await updateInstituteRequest(token, instituteData);
+        setInstitute(updated);
+        return null;
+      } catch (error) {
+        return actionError(error);
+      }
+    },
   };
 
   /** Banner que muestra el mensaje de éxito cuando successMessage tiene valor. */
@@ -174,6 +194,7 @@ const banner = successMessage && (
         currentUserId={currentUserId}
         onViewStudentProgress={onViewStudentProgress}
         banner={banner}
+        institute={institute}
         usersEmptyMessage={
           loadError
             ? 'No se pudieron cargar los usuarios. Intentá de nuevo.'

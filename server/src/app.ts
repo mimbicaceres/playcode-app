@@ -5,6 +5,7 @@ import usersRoutes from "./modules/users/users.routes";
 import coursesRoutes from "./modules/courses/courses.routes";
 import courseContentRoutes from "./modules/courses/courseContent.routes";
 import courseAdminRoutes from "./modules/courses/courseAdmin.routes";
+import instituteRoutes from "./modules/institute/institute.routes";
 import progressRoutes from "./modules/progress/progress.routes";
 import exercisesRoutes from "./modules/exercises/exercises.routes";
 
@@ -33,6 +34,7 @@ app.use("/api/users/me/progress", progressRoutes);
   app.use("/api/exercises", exercisesRoutes);
   app.use("/api/courses", courseContentRoutes);
   app.use("/api/admin/courses", courseAdminRoutes);
+  app.use("/api/institute", instituteRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Ruta no encontrada" });

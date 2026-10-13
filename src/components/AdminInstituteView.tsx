@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminInstituteData, UserRole } from '../types';
-import type { AdminCourseContent, ExerciseFormInput, UserEditData } from '../auth/api';
+import type { AdminCourseContent, ExerciseFormInput, InstituteData, UserEditData } from '../auth/api';
 import { StatusHud } from './ui/StatusHud';
 import {
   AssignCoursesModal, CourseAssignModal, CourseDetailModal, CreateCourseModal, EditUserModal,
@@ -25,6 +25,9 @@ export interface AdminInstituteActions {
   createExercise?: (unitId: string, data: ExerciseFormInput) => Promise<string | null>;
   updateExercise?: (exerciseId: string, data: ExerciseFormInput) => Promise<string | null>;
   deleteExercise?: (exerciseId: string) => Promise<string | null>;
+  // Datos del instituto (pestaña Configuración). Opcional: sin esto, esos
+  // campos quedan deshabilitados como antes (ej. en el panel demo).
+  updateInstitute?: (data: { name?: string; address?: string; contactEmail?: string }) => Promise<string | null>;
 }
 
 interface AdminInstituteViewProps {
@@ -39,6 +42,9 @@ interface AdminInstituteViewProps {
   banner?: React.ReactNode;
   // Shown inside the users table when it has no rows (e.g. while loading).
   usersEmptyMessage?: string;
+  // Datos del instituto (pestaña Configuración); sin esto, los campos
+  // quedan deshabilitados (ej. en el panel demo).
+  institute?: InstituteData;
 }
 
 // The general report is the "Reporte" section of the top navbar.
@@ -97,9 +103,26 @@ export const AdminInstituteView: React.FC<AdminInstituteViewProps> = ({
   onViewStudentProgress,
   banner,
   usersEmptyMessage = 'Sin usuarios para mostrar.',
+  institute,
 }) => {
   /** Pestaña activa del panel: usuarios, cursos, actividades o configuración. */
 const [activeTab, setActiveTab] = useState<AdminTab>('users');
+  /** Formulario de "Datos del instituto"; se resetea si cambian los datos cargados. */
+  const [instituteForm, setInstituteForm] = useState({
+    name: institute?.name ?? '',
+    address: institute?.address ?? '',
+    contactEmail: institute?.contactEmail ?? '',
+  });
+  const [instituteBusy, setInstituteBusy] = useState(false);
+  const [instituteError, setInstituteError] = useState<string | null>(null);
+  const [instituteSaved, setInstituteSaved] = useState(false);
+  useEffect(() => {
+    setInstituteForm({
+      name: institute?.name ?? '',
+      address: institute?.address ?? '',
+      contactEmail: institute?.contactEmail ?? '',
+    });
+  }, [institute]);
   /** Filtro de rol para la tabla de usuarios; 'all' muestra todos. */
 const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   /** Texto de búsqueda ingresado para filtrar usuarios por nombre o email. */
@@ -449,21 +472,77 @@ const stats = [
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
             <h2 className="font-heading font-bold text-lg text-[#0b1c30] mb-1">Datos del instituto</h2>
             <p className="text-xs text-slate-500 mb-5">Información general del instituto.</p>
-            <div className="flex flex-col gap-4">
-              {['Nombre del instituto', 'Dirección', 'Correo de contacto'].map((label) => (
-                <div key={label} className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-700">{label}</label>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="Sin configurar"
-                    title={SOON}
-                    className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50 text-slate-400 cursor-not-allowed"
-                  />
+            {actions.updateInstitute ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setInstituteBusy(true);
+                  setInstituteError(null);
+                  const error = await actions.updateInstitute!(instituteForm);
+                  setInstituteBusy(false);
+                  if (error) setInstituteError(error);
+                  else {
+                    setInstituteSaved(true);
+                    setTimeout(() => setInstituteSaved(false), 3000);
+                  }
+                }}
+                className="flex flex-col gap-4"
+              >
+                {([
+                  { key: 'name', label: 'Nombre del instituto' },
+                  { key: 'address', label: 'Dirección' },
+                  { key: 'contactEmail', label: 'Correo de contacto' },
+                ] as const).map(({ key, label }) => (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700">{label}</label>
+                    <input
+                      type="text"
+                      value={instituteForm[key]}
+                      onChange={(e) => setInstituteForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder="Sin configurar"
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-600 transition-colors"
+                    />
+                  </div>
+                ))}
+                {instituteError && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                    <span className="material-symbols-outlined text-red-600 text-[18px]">error</span>
+                    <p className="text-xs font-medium">{instituteError}</p>
+                  </div>
+                )}
+                {instituteSaved && (
+                  <p className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    Guardado.
+                  </p>
+                )}
+                <div className="pt-1">
+                  <button
+                    type="submit"
+                    disabled={instituteBusy}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {instituteBusy ? 'Guardando...' : 'Guardar datos'}
+                  </button>
                 </div>
-              ))}
-              <p className="text-[11px] text-slate-400">La edición de los datos del instituto estará disponible próximamente.</p>
-            </div>
+              </form>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {['Nombre del instituto', 'Dirección', 'Correo de contacto'].map((label) => (
+                  <div key={label} className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700">{label}</label>
+                    <input
+                      type="text"
+                      disabled
+                      placeholder="Sin configurar"
+                      title={SOON}
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50 text-slate-400 cursor-not-allowed"
+                    />
+                  </div>
+                ))}
+                <p className="text-[11px] text-slate-400">La edición de los datos del instituto estará disponible próximamente.</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">

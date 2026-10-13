@@ -44,6 +44,16 @@ model User {
   exerciseProgresses ExerciseProgress[]
 }
 
+// Datos generales del instituto (un solo registro global: esta plataforma
+// no modela multiples instituciones, solo un instituto usandola).
+model Institute {
+  id           String   @id @default("singleton")
+  name         String?
+  address      String?
+  contactEmail String?
+  updatedAt    DateTime @updatedAt
+}
+
 model Course {
   id          String   @id @default(uuid())
   slug        String   @unique

@@ -409,6 +409,33 @@ export async function fetchAdminCourses(token: string): Promise<AdminCourseSumma
   return courses;
 }
 
+// Datos generales del instituto (un solo registro global). Solo admin.
+export interface InstituteData {
+  id: string;
+  name: string | null;
+  address: string | null;
+  contactEmail: string | null;
+}
+
+export async function fetchInstitute(token: string): Promise<InstituteData> {
+  const { institute } = await request<{ institute: InstituteData }>('/institute', {
+    headers: authHeaders(token),
+  });
+  return institute;
+}
+
+export async function updateInstituteRequest(
+  token: string,
+  data: { name?: string; address?: string; contactEmail?: string },
+): Promise<InstituteData> {
+  const { institute } = await request<{ institute: InstituteData }>('/institute', {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return institute;
+}
+
 // Contenido completo de un curso dinamico para el editor de admin: a
 // diferencia de CourseContent (alumno/docente), este SI expone el
 // expectedOutput de los test cases ocultos (el admin los necesita editar).
