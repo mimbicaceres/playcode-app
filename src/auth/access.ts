@@ -12,8 +12,9 @@ const REAL_ACCESS: Record<ScreenView, Access> = {
   courses_map: ['student', 'teacher'],
   // Course view: the student's learning path, or the teacher's course ("Ver curso").
   course_roadmap: ['student', 'teacher'],
-  unit_detail: ['student'],
-  exercise: ['student'],
+  // Teachers inspect the assigned course content through the read-only views.
+  unit_detail: ['student', 'teacher'],
+  exercise: ['student', 'teacher'],
   profile: ['student', 'teacher'],
   // Admin: general report; teacher: report per course; student: own progress (not in navbar).
   reports: ['student', 'teacher', 'admin'],

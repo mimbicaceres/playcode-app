@@ -506,7 +506,17 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           </div>
         )}
 
-        {activeView === 'unit_detail' && !isRealStudent && !teacherDynamicCourse && (
+        {(activeView === 'unit_detail' || activeView === 'exercise') && teacherMode && !teacherDynamicCourse && (
+          <div className="w-full max-w-3xl mx-auto px-4 py-10">
+            <EmptyState
+              imageSrc={MASCOT_IMAGES.mainHero}
+              title="Seleccioná un curso para consultar sus actividades"
+              message="Entrá a Cursos y elegí Ver curso para acceder a las unidades y consignas disponibles."
+            />
+          </div>
+        )}
+
+        {activeView === 'unit_detail' && !isRealStudent && !teacherMode && (
           <UnitDetailView
             onNavigate={setCurrentView}
             onSelectExercise={(exId: string) => {
@@ -541,7 +551,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           />
         )}
 
-        {activeView === 'exercise' && !isRealStudent && !teacherDynamicCourse && (
+        {activeView === 'exercise' && !isRealStudent && !teacherMode && (
           <ExerciseCodingView
             onNavigate={setCurrentView}
             onAddXp={handleAddXp}
