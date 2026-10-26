@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StudentProgressRecord } from '../types';
 import { StatusHud } from './ui/StatusHud';
+import { fetchMyProgress, getStoredToken, UserProgress } from '../auth/api';
 import { EmptyState } from './ui/EmptyState';
 
 interface StudentProgressViewProps {
@@ -11,6 +12,9 @@ interface StudentProgressViewProps {
   emptyLabel?: string;
   // Student to show right away (e.g. "Ver progreso" from the teacher's Alumnos view).
   initialStudentId?: string | null;
+  // Only when the screen should show the logged-in user's own backend progress.
+  // Off by default, so the admin/teacher/demo screens show the selected student.
+  showOwnProgress?: boolean;
 }
 
 const UNIT_BAR_COLORS = ['bg-emerald-500', 'bg-blue-500', 'bg-amber-400', 'bg-orange-400', 'bg-violet-400'];
@@ -76,8 +80,8 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                 {student.courseName ? `Curso: ${student.courseName}` : 'Sin curso asignado'}
               </span>
               <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${student.isActive
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-slate-100 text-slate-500 border-slate-200'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
                 }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${student.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 {student.isActive ? 'Alumno activo' : 'Sin actividad reciente'}
@@ -260,8 +264,8 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
                   <span className="text-slate-500 w-20 shrink-0">{activity.when}</span>
                   <span className="flex-1 text-slate-700 truncate">{activity.exercise}</span>
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${activity.correct
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-red-50 text-red-600 border-red-200'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-red-50 text-red-600 border-red-200'
                     }`}>
                     <span className="material-symbols-outlined text-xs">{activity.correct ? 'check' : 'close'}</span>
                     {activity.correct ? 'Correcto' : 'Incorrecto'}
@@ -311,12 +315,13 @@ const StudentProgressDetails: React.FC<{ student: StudentProgressRecord }> = ({ 
 };
 
 // Case- and accent-insensitive matching ("Gonzalez" finds "González").
-const normalize = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   students,
   emptyLabel = 'Sin alumnos asignados',
   initialStudentId = null,
+  showOwnProgress = false,
 }) => {
   const initialStudent = students.find((s) => s.id === initialStudentId);
   /** Estado del texto de búsqueda del alumno. */
@@ -327,6 +332,35 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   /** Índice del elemento resaltado en la lista de sugerencias. */
   const [highlighted, setHighlighted] = useState(0);
+  // Real backend progress state
+  /** Progreso real obtenido del backend; null mientras se carga. */
+  const [realProgress, setRealProgress] = useState<UserProgress | null>(null);
+  /** Indica si la petición al backend está en curso. */
+  const [loading, setLoading] = useState(false);
+  /** Mensaje de error en caso de falla al cargar el progreso. */
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  /**
+   * Effect que carga el progreso del usuario actual desde el backend.
+   * Solo corre cuando `showOwnProgress` es true; en las pantallas de admin,
+   * docente y demo no se consulta, así se muestra el alumno elegido.
+   */
+  useEffect(() => {
+    if (!showOwnProgress) return;
+    const token = getStoredToken();
+    if (!token) return;
+    setLoading(true);
+    fetchMyProgress(token)
+      .then((data) => {
+        setRealProgress(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+      });
+  }, [showOwnProgress]);
+
   const searchRef = useRef<HTMLDivElement>(null);
 
   const hasStudents = students.length > 0;
@@ -493,31 +527,82 @@ export const StudentProgressView: React.FC<StudentProgressViewProps> = ({
             )}
           </div>
         </div>
-
       </StatusHud>
-      {student ? (
-        student.assignedCourses && student.assignedCourses.length > 0 ? (
-          <StudentProgressDetails student={student} />
-        ) : (
+
+      {loading ? (
+        <div className="flex justify-center items-center py-10 text-[#737686]">
+          Cargando progreso...
+        </div>
+      ) : realProgress ? (
+        realProgress.byExercise.length === 0 ? (
           <EmptyState
-            title="Sin cursos asignados"
-            message="Estás registrado, pero todavía no tenés un curso asignado. Tu docente o administrador debe asignarte a un curso para que puedas comenzar."
-          />
+            title="Sin progreso aún"
+            message="Todavía no completaste ningún ejercicio"
+          >
+            <p className="text-sm text-[#434655] mt-1">
+              ¡Resolvé tu primer ejercicio para ver tu progreso aquí!
+            </p>
+          </EmptyState>
+        ) : (
+          <>
+            {/* Summary cards */}
+            <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">Ejercicios completados</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalCompleted}</span>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">XP ganado</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalXp}</span>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex flex-col items-center">
+                <span className="text-sm text-slate-500">Intentos totales</span>
+                <span className="font-bold text-xl text-[#0b1c30]">{realProgress.totalAttempts}</span>
+              </div>
+            </section>
+
+            {/* List of completed exercises */}
+            <section className="grid gap-4">
+              {realProgress.byExercise
+                .filter(item => item.completed)
+                .map(item => (
+                  <div key={item.exerciseId} className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs p-4 flex items-center justify-between">
+                    <div className="font-heading font-bold text-[#0b1c30]">Ejercicio {item.exerciseId}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {item.xpEarned} XP
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {new Date(item.completedAt!).toLocaleDateString('es-AR')}
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {item.attempts} intento{item.attempts !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </section>
+          </>
         )
       ) : (
-        <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
-            <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
-          </div>
-          <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
-            {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
-          </h2>
-          <p className="text-sm text-slate-500 max-w-md">
-            {hasStudents
-              ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
-              : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
-          </p>
-        </section>
+        // Fallback UI (demo mode)
+        student ? (
+          <StudentProgressDetails student={student} />
+        ) : (
+          <section className="bg-white rounded-2xl border border-[#e2e8f0] shadow-xs py-16 px-6 flex flex-col items-center text-center gap-2">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mb-1">
+              <span className="material-symbols-outlined text-3xl">{hasStudents ? 'person_search' : 'group_off'}</span>
+            </div>
+            <h2 className="font-heading font-bold text-lg text-[#0b1c30]">
+              {hasStudents ? 'Buscá un alumno para ver su progreso' : emptyLabel}
+            </h2>
+            <p className="text-sm text-slate-500 max-w-md">
+              {hasStudents
+                ? 'Escribí su nombre en el buscador y elegilo de la lista para ver su seguimiento individual.'
+                : 'Cuando haya alumnos disponibles, vas a poder buscarlos acá para ver su seguimiento individual.'}
+            </p>
+          </section>
+        )
       )}
     </div>
   );
