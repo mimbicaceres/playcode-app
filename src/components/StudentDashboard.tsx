@@ -169,9 +169,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
   const [showTip, setShowTip] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
-  // "Tus Cursos": only a few are shown until "Ver todos" is pressed.
-  const [showAllCourses, setShowAllCourses] = useState(false);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
@@ -210,7 +207,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
   }
   const heroPrimaryAction = isDemo ? () => onNavigate('exercise') : hero?.onOpen;
 
-  // ----- Courses list (a preview first, all of them after "Ver todos") -----
+  // ----- Courses list (only a preview; "Ver todos" opens the Cursos screen) -----
   const courseCards: CourseCardModel[] = isDemo
     ? DEMO_STUDENT_HOME.courses.map((c) => ({
         id: c.id,
@@ -232,11 +229,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
       }));
 
   const hasMoreCourses = courseCards.length > COURSES_PREVIEW;
-  const visibleCourseCards = showAllCourses ? courseCards : courseCards.slice(0, COURSES_PREVIEW);
+  const visibleCourseCards = courseCards.slice(0, COURSES_PREVIEW);
 
-  // Collapsed: the list stretches to the height of the featured course
-  // (3 rows = COURSES_PREVIEW).
-  const fillCourses = !!hero && !showAllCourses && visibleCourseCards.length === COURSES_PREVIEW;
+  // The list stretches to the height of the featured course (3 rows = COURSES_PREVIEW).
+  const fillCourses = !!hero && visibleCourseCards.length === COURSES_PREVIEW;
 
   const courseCount = isDemo ? DEMO_STUDENT_HOME.courses.length : (courses?.length ?? 0);
 
@@ -320,7 +316,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
       </div>
       
       {/* Row 2: featured course + course list */}
-      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 ${showAllCourses ? 'lg:items-start' : 'items-stretch lg:flex-1 lg:max-h-[360px]'}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch lg:flex-1 lg:max-h-[360px]`}>
         {hero && (
           <section className="lg:col-span-7 flex flex-col gap-2 min-w-0">
             <div className="flex items-center justify-between">
@@ -384,22 +380,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         <section className={`${hero ? 'lg:col-span-5' : 'lg:col-span-12'} flex flex-col gap-2 min-w-0`}>
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-[#0b1c30]">Tus Cursos</h2>
-            {hasMoreCourses ? (
-              <button
-                onClick={() => setShowAllCourses((open) => !open)}
-                className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
-              >
-                {showAllCourses ? 'Ver menos' : `Ver todos (${courseCards.length})`}
-                <span className="material-symbols-outlined text-sm">{showAllCourses ? 'expand_less' : 'expand_more'}</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => onNavigate('courses_map')}
-                className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
-              >
-                Ver catálogo <span className="material-symbols-outlined text-sm">arrow_forward</span>
-              </button>
-            )}
+            <button
+              onClick={() => onNavigate('courses_map')}
+              className="text-xs font-bold text-[#2563eb] hover:underline flex items-center gap-0.5 cursor-pointer"
+            >
+              {hasMoreCourses ? `Ver todos (${courseCards.length})` : 'Ver catálogo'}
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </button>
           </div>
           <div className={`grid grid-cols-1 gap-2 ${fillCourses ? 'lg:flex-1 lg:grid-rows-3' : 'content-start'}`}>
             {visibleCourseCards.map((course) => (
