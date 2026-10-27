@@ -18,6 +18,7 @@
     "verify:js-course": "tsx scripts/verifyJsCourse.ts",
     "verify:sql-course": "tsx scripts/verifySqlCourse.ts",
     "verify:html-course": "tsx scripts/verifyHtmlCourse.ts",
+    "users:file": "tsx scripts/exportUsers.ts",
     "db:catalog": "tsx scripts/populateCatalog.ts"
   },
   "dependencies": {

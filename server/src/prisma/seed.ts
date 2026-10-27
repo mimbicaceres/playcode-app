@@ -17,9 +17,9 @@ interface SeedUser {
 }
 
 // Demo accounts (one per role) with a well-known password.
-const DEMO_PASSWORD = "password123";
+export const DEMO_PASSWORD = "password123";
 
-const DEMO_USERS: SeedUser[] = [
+export const DEMO_USERS: SeedUser[] = [
   { email: "estudiante@ejemplo.com", name: "Facundo", lastName: "González", role: "student", grade: "4to Año", school: "Colegio San Martín" },
   { email: "docente@ejemplo.com", name: "Santiago", lastName: "Ramos", role: "teacher", school: "Colegio San Martín" },
   { email: "admin@ejemplo.com", name: "Admin", lastName: "CODIX", role: "admin", school: "Colegio San Martín" },

@@ -10,5 +10,5 @@ coverage/
 /.local/
 
 # Datos locales que no se suben: contraseñas de usuarios y volcado de contexto
-/usuarios-iniciales.txt
+/usuarios-iniciales*.txt
 /digest.txt
