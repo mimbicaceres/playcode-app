@@ -300,7 +300,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   if (!user && (isDemo || !isPublicView(currentView))) {
     return <Navigate to={getPathForView('login')} replace state={{ from: location.pathname }} />;
   }
-  if (user && (currentView === 'login' || currentView === 'register')) {
+  if (user && (currentView === 'welcome' || currentView === 'login' || currentView === 'register')) {
     return <Navigate to={getPathForView(getHomeView(user.role))} replace />;
   }
   if (user && isDemo && isPublicView(currentView)) {
@@ -388,7 +388,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   return (
     <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Global Navigation Bar */}
-      {user && (
+      {user && !isPublicView(currentView) && (
         <Navigation
           currentView={currentView}
           onNavigate={setCurrentView}
