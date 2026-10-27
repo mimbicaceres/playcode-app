@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:users": "tsx src/prisma/seed.ts",
     "db:seed:python": "tsx prisma/seed-python-course.ts",
+    "verify:js-course": "tsx scripts/verifyJsCourse.ts",
     "db:catalog": "tsx scripts/populateCatalog.ts"
   },
   "dependencies": {

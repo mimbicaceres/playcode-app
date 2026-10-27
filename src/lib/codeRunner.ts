@@ -2,6 +2,7 @@
 // devuelven el mismo formato (RunSubmissionResult): salida cruda por test case.
 // Nunca deciden si el alumno aprobo; eso lo hace el backend (codeGrader.ts).
 import { RunSubmissionResult, RunnerTestCase, runTestCases as runPython } from './pyodideRunner';
+import { runJsTestCases } from './jsRunner';
 
 export type { RunnerTestCase, RunSubmissionResult };
 
@@ -10,6 +11,7 @@ type Runner = (code: string, testCases: RunnerTestCase[]) => Promise<RunSubmissi
 // Cada curso nuevo registra aca su runner (javascript, sql, html).
 const RUNNERS: Record<string, Runner> = {
   python: runPython,
+  javascript: runJsTestCases,
 };
 
 export function runExercise(language: string, code: string, testCases: RunnerTestCase[]): Promise<RunSubmissionResult> {
