@@ -5,6 +5,7 @@ import { seedPythonCourse } from "./seed-python-course";
 import { seedJavascriptCourse } from "./seeds/javascript-course";
 import { seedSqlCourse } from "./seeds/sql-course";
 import { seedHtmlCourse } from "./seeds/html-course";
+import { seedInstitute } from "./seeds/institute";
 
 // Punto de entrada unico del seed: `npm run db:seed` (o `prisma migrate dev` /
 // `prisma migrate reset`, que lo llaman solos). Cada paso es idempotente, asi
@@ -20,6 +21,8 @@ async function main() {
   await seedSqlCourse();
   console.log("== Curso HTML y CSS ==");
   await seedHtmlCourse();
+  console.log("== Institución de ejemplo (usuarios, asignaciones y progreso) ==");
+  await seedInstitute();
 }
 
 main()

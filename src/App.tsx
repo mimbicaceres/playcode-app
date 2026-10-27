@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord } from './types';
+import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord, ReportsData } from './types';
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, CourseProgressSummary, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchMe, fetchMyCourses,
+  ApiError, CourseProgressSummary, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchInstituteReport, fetchMe, fetchMyCourses,
   fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest, registerRequest,
   storeToken, toUserProfile, updateMyAvatarRequest,
 } from './auth/api';
@@ -82,6 +82,8 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   const [progressStudentId, setProgressStudentId] = useState<string | null>(null);
   // Real teacher: assigned courses with their students (GET /api/users/me/teaching).
   const [teaching, setTeaching] = useState<TeachingCourse[]>([]);
+  // Reporte general real del instituto (solo admin, se pide al abrir "Progreso").
+  const [instituteReport, setInstituteReport] = useState<ReportsData | null>(null);
   // Demo institute: temporary changes made by the demo admin (reset on reload,
   // never sent to the backend) and every demo view derived from them.
   const [demoState, setDemoState] = useState(initialDemoInstituteState);
@@ -117,6 +119,17 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
       .then(({ courseIds }) => setMyCourseIds(courseIds))
       .catch(() => {});
   }, [currentView, user?.id]);
+
+  // El reporte del admin sale de la base y cambia con el tiempo: se vuelve a
+  // pedir cada vez que se abre la vista de reportes.
+  const isAdminSession = !isDemo && user?.role === 'admin';
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!isAdminSession || !token || currentView !== 'reports') return;
+    fetchInstituteReport(token)
+      .then(setInstituteReport)
+      .catch(() => setInstituteReport(null));
+  }, [isAdminSession, currentView, user?.id]);
 
   const isTeacherSession = !isDemo && user?.role === 'teacher';
   useEffect(() => {
@@ -594,9 +607,9 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
           ) : isDemo || !user ? (
             <ReportsAnalyticsView data={DEMO_REPORTS} />
           ) : user.role === 'admin' ? (
-            // General report over the whole platform: aun no hay agregado
-            // por todos los cursos/alumnos (fuera del alcance de esta etapa).
-            <ReportsAnalyticsView data={EMPTY_REPORTS} scope="general" />
+            // General report over the whole institute, calculated by the backend
+            // (GET /api/reports/institute); empty until it loads or if it fails.
+            <ReportsAnalyticsView data={instituteReport ?? EMPTY_REPORTS} scope="general" />
           ) : user.role === 'teacher' ? (
             // Selected course → report of that course only (per-unit, averaged
             // across its students); no course → all the teacher's courses.

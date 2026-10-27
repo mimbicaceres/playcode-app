@@ -1,4 +1,4 @@
-import { UserProfile, UserRole } from '../types';
+import { ReportsData, UserProfile, UserRole } from '../types';
 
 // Shape returned by the backend (server/src/lib/users.ts → PublicUser).
 export interface ApiUser {
@@ -415,6 +415,15 @@ export interface InstituteData {
   name: string | null;
   address: string | null;
   contactEmail: string | null;
+}
+
+// Reporte general del instituto (solo admin), calculado en el backend con los
+// usuarios, asignaciones y progreso reales de los ultimos 30 dias.
+export async function fetchInstituteReport(token: string): Promise<ReportsData> {
+  const { report } = await request<{ report: ReportsData }>('/reports/institute', {
+    headers: authHeaders(token),
+  });
+  return report;
 }
 
 export async function fetchInstitute(token: string): Promise<InstituteData> {

@@ -8,6 +8,7 @@ import courseAdminRoutes from "./modules/courses/courseAdmin.routes";
 import instituteRoutes from "./modules/institute/institute.routes";
 import progressRoutes from "./modules/progress/progress.routes";
 import exercisesRoutes from "./modules/exercises/exercises.routes";
+import reportsRoutes from "./modules/reports/reports.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -35,6 +36,7 @@ app.use("/api/users/me/progress", progressRoutes);
   app.use("/api/courses", courseContentRoutes);
   app.use("/api/admin/courses", courseAdminRoutes);
   app.use("/api/institute", instituteRoutes);
+  app.use("/api/reports", reportsRoutes);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: "Ruta no encontrada" });
