@@ -1,22 +1,13 @@
 import { Course } from '../types';
-import { COURSES_DATA } from './mockData';
 
-// CODIX course catalog for real accounts: the predefined courses (content
-// only), without the example progress of mockData. Every real user starts at
-// zero; ids match server/src/lib/codixCourses.ts.
-export const CODIX_CATALOG: Course[] = COURSES_DATA.map((course) => ({
-  ...course,
-  progressPercent: 0,
-  completedLessons: 0,
-  // Assigned by an administrator, so it is never locked for the user.
-  status: 'available',
-  units: course.units.map((unit, unitIndex) => ({
-    ...unit,
-    progressPercent: 0,
-    status: unitIndex === 0 ? 'active' : 'locked',
-    exercises: unit.exercises.map((exercise) => ({ ...exercise, status: 'locked' })),
-  })),
-}));
+// Catalogo de cursos fijos para cuentas reales: los 5 cursos viejos de CODIX
+// (prog1, py2, java3, js_base, css_modern) se dieron de baja porque ya existen
+// sus alternativas reales en la base de datos (Python, JavaScript, SQL y HTML/CSS).
+// Todos los cursos reales llegan ahora desde el backend (ver dynamicCourses.ts).
+//
+// El modo demo (/demo) NO usa este catalogo: sigue con su propio contenido de
+// ejemplo en mockData.ts.
+export const CODIX_CATALOG: Course[] = [];
 
 export const findCatalogCourse = (id: string) => CODIX_CATALOG.find((c) => c.id === id);
 

@@ -329,13 +329,58 @@ export interface GradedTestCaseResult {
   timedOut: boolean;
 }
 
+// Logro de gamificacion (calculado por el backend a partir del avance real).
+export interface GamificationBadge {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+  color: string;
+  bgColor: string;
+  unlocked: boolean;
+  unlockedAt: string | null;
+  // Progreso hacia el logro (p. ej. 7 de 10 ejercicios).
+  current: number;
+  target: number;
+}
+
+export interface Gamification {
+  level: number;
+  levelTitle: string;
+  totalXp: number;
+  levelStartXp: number;
+  nextLevelXp: number;
+  xpIntoLevel: number;
+  xpToNextLevel: number;
+  percentToNextLevel: number;
+  streakDays: number;
+  bestStreakDays: number;
+  badges: GamificationBadge[];
+  badgesUnlocked: number;
+  badgesTotal: number;
+}
+
+// Que cambio al enviar un ejercicio, para celebrarlo en pantalla.
+export interface GamificationDelta {
+  leveledUp: boolean;
+  level: number;
+  levelTitle: string;
+  newBadges: GamificationBadge[];
+  percentToNextLevel: number;
+  xpToNextLevel: number;
+}
+
 export interface SubmitCodeExerciseResponse {
   success: boolean;
+  // XP otorgado en este envio (0 si repasaste un ejercicio ya resuelto), con los ajustes del admin.
   xpEarned: number;
+  // Parte de xpEarned que es bonus por el primer ejercicio del dia.
+  bonusXp?: number;
   attempts: number;
   completed: boolean;
   streakDays: number;
   results: GradedTestCaseResult[];
+  gamification?: GamificationDelta;
 }
 
 // Envía la salida cruda (stdout/stderr por test case) que produjo el código
@@ -354,11 +399,13 @@ export async function submitCodeExercise(
   payload:
     | { outputs: { testCaseId: string; stdout: string; stderr: string; timedOut: boolean }[] }
     | { infraError: string },
+  // Segundos que el alumno estuvo trabajando en el ejercicio (alimenta el tiempo de practica).
+  timeSpentSec?: number,
 ): Promise<SubmitCodeExerciseResponse> {
   return request<SubmitCodeExerciseResponse>(`/exercises/${exerciseId}/submit`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ code, ...payload }),
+    body: JSON.stringify({ code, ...payload, timeSpentSec }),
   });
 }
 
@@ -369,6 +416,13 @@ export interface CourseContent {
   slug: string;
   title: string | null;
   description: string | null;
+  language: string;
+  // Opciones de presentacion (todas opcionales): categoria libre, nivel, duracion, icono y color.
+  category: string | null;
+  level: string | null;
+  estimatedHours: number | null;
+  iconName: string | null;
+  color: string | null;
   progressPercent: number;
   units: {
     id: string;
@@ -397,6 +451,14 @@ export interface AdminCourseSummary {
   id: string;
   title: string | null;
   description: string | null;
+  language: string;
+  // Opciones de presentacion (todas opcionales): categoria libre, nivel, duracion, icono y color.
+  category: string | null;
+  level: string | null;
+  estimatedHours: number | null;
+  iconName: string | null;
+  color: string | null;
+  assignmentsCount: number;
   unitsCount: number;
   activitiesCount: number;
   units: { title: string; activities: number; exercises: { id: string; title: string }[] }[];
@@ -415,6 +477,29 @@ export interface InstituteData {
   name: string | null;
   address: string | null;
   contactEmail: string | null;
+  // Ajustes de gamificacion: XP otorgado = (XP del ejercicio + baseXp) x xpMultiplier,
+  // mas streakBonusXp el primer ejercicio del dia. disabledBadges = logros desactivados.
+  xpMultiplier: number;
+  baseXp: number;
+  streakBonusXp: number;
+  disabledBadges: string[];
+}
+
+export interface BadgeCatalogItem {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+  color: string;
+  bgColor: string;
+}
+
+// Catalogo de logros disponibles (solo admin).
+export async function fetchBadgeCatalog(token: string): Promise<BadgeCatalogItem[]> {
+  const { badges } = await request<{ badges: BadgeCatalogItem[] }>('/institute/badges', {
+    headers: authHeaders(token),
+  });
+  return badges;
 }
 
 // Reporte general del instituto (solo admin), calculado en el backend con los
@@ -435,7 +520,15 @@ export async function fetchInstitute(token: string): Promise<InstituteData> {
 
 export async function updateInstituteRequest(
   token: string,
-  data: { name?: string; address?: string; contactEmail?: string },
+  data: {
+    name?: string;
+    address?: string;
+    contactEmail?: string;
+    xpMultiplier?: number;
+    baseXp?: number;
+    streakBonusXp?: number;
+    disabledBadges?: string[];
+  },
 ): Promise<InstituteData> {
   const { institute } = await request<{ institute: InstituteData }>('/institute', {
     method: 'PATCH',
@@ -453,6 +546,10 @@ export interface AdminTestCase {
   input: string | null;
   expectedOutput: string;
   isHidden: boolean;
+  // "text" | "rows_ordered" | "rows_unordered" | "dom" y los datos del ejecutor (script SQL,
+  // chequeos de HTML): hay que devolverlos al guardar para no perderlos.
+  compareMode: string;
+  spec: unknown;
 }
 
 export interface AdminExercise {
@@ -460,6 +557,7 @@ export interface AdminExercise {
   title: string | null;
   prompt: string | null;
   starterCode: string | null;
+  language: string;
   rewardXp: number;
   hint: string | null;
   testCases: AdminTestCase[];
@@ -475,7 +573,17 @@ export interface AdminCourseContent {
   id: string;
   title: string | null;
   description: string | null;
+  // Lenguaje del curso: python | javascript | sql | html.
+  language: string;
+  // Opciones de presentacion (todas opcionales): categoria libre, nivel, duracion, icono y color.
+  category: string | null;
+  level: string | null;
+  estimatedHours: number | null;
+  iconName: string | null;
+  color: string | null;
   units: AdminUnit[];
+  // Cuantos usuarios tienen el curso asignado.
+  _count?: { assignments: number };
 }
 
 export async function fetchAdminCourseContent(token: string, courseId: string): Promise<AdminCourseContent> {
@@ -485,9 +593,23 @@ export async function fetchAdminCourseContent(token: string, courseId: string): 
   return course;
 }
 
-export interface CreateCourseInput {
+// Opciones de presentacion de un curso; con null (o texto vacio) se borra el valor.
+export interface CoursePresentationInput {
+  category?: string | null;
+  level?: string | null;
+  estimatedHours?: number | null;
+  iconName?: string | null;
+  color?: string | null;
+}
+
+export interface CreateCourseInput extends CoursePresentationInput {
   title: string;
   description?: string;
+  language?: string;
+  // Unidades con las que arranca el curso (un titulo por unidad).
+  unitTitles?: string[];
+  // Crear el curso como copia de otro (unidades, ejercicios y casos de prueba).
+  duplicateFromCourseId?: string;
 }
 
 export async function createCourseRequest(token: string, data: CreateCourseInput) {
@@ -499,7 +621,7 @@ export async function createCourseRequest(token: string, data: CreateCourseInput
   return course;
 }
 
-export async function updateCourseRequest(token: string, courseId: string, data: Partial<CreateCourseInput>) {
+export async function updateCourseRequest(token: string, courseId: string, data: Partial<Omit<CreateCourseInput, 'unitTitles' | 'duplicateFromCourseId'>>) {
   const { course } = await request<{ course: { id: string } }>(`/admin/courses/${courseId}`, {
     method: 'PATCH',
     headers: authHeaders(token),
@@ -530,9 +652,10 @@ export interface ExerciseFormInput {
   title: string;
   prompt: string;
   starterCode: string;
+  language?: string;
   rewardXp: number;
   hint?: string;
-  testCases: { input?: string; expectedOutput: string; isHidden?: boolean }[];
+  testCases: { input?: string; expectedOutput: string; isHidden?: boolean; compareMode?: string; spec?: unknown }[];
 }
 
 export async function createExerciseRequest(token: string, unitId: string, data: ExerciseFormInput): Promise<AdminExercise> {
@@ -555,6 +678,42 @@ export async function updateExerciseRequest(
     body: JSON.stringify(data),
   });
   return exercise;
+}
+
+export async function duplicateUnitRequest(token: string, unitId: string): Promise<AdminUnit> {
+  const { unit } = await request<{ unit: AdminUnit }>(`/admin/courses/units/${unitId}/duplicate`, { method: 'POST', headers: authHeaders(token) });
+  return unit;
+}
+
+export async function duplicateExerciseRequest(token: string, exerciseId: string): Promise<AdminExercise> {
+  const { exercise } = await request<{ exercise: AdminExercise }>(`/admin/courses/exercises/${exerciseId}/duplicate`, { method: 'POST', headers: authHeaders(token) });
+  return exercise;
+}
+
+export async function deleteUnitRequest(token: string, unitId: string): Promise<void> {
+  await request<void>(`/admin/courses/units/${unitId}`, { method: 'DELETE', headers: authHeaders(token) });
+}
+
+// Borra el curso con sus unidades, ejercicios, asignaciones y el avance de los alumnos.
+export async function deleteCourseRequest(token: string, courseId: string): Promise<void> {
+  await request<void>(`/admin/courses/${courseId}`, { method: 'DELETE', headers: authHeaders(token) });
+}
+
+// `unitIds` / `exerciseIds`: todos los ids, en el nuevo orden.
+export async function reorderUnitsRequest(token: string, courseId: string, unitIds: string[]): Promise<void> {
+  await request<void>(`/admin/courses/${courseId}/units/order`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ unitIds }),
+  });
+}
+
+export async function reorderExercisesRequest(token: string, unitId: string, exerciseIds: string[]): Promise<void> {
+  await request<void>(`/admin/courses/units/${unitId}/exercises/order`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ exerciseIds }),
+  });
 }
 
 export async function deleteExerciseRequest(token: string, exerciseId: string): Promise<void> {
@@ -591,9 +750,33 @@ export interface CourseProgressSummary {
 
 // XP ganado por dia (huso Argentina) en los ultimos 7 dias, del mas viejo
 // al mas nuevo. Alimenta "Tendencias de XP & Actividad" en Reportes.
+// Estadisticas de un alumno calculadas con su historial de intentos.
+export interface StudentStats {
+  accuracy: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  totalAttempts: number;
+  lastActivityAt: string | null;
+  isActive: boolean;
+  // Ultimos 30 dias (la ventana de "Progreso").
+  last30Days: { practiceMinutes: number; linesOfCode: number; incorrect: number };
+  practice: {
+    thisWeekMinutes: number;
+    dailyAverageMinutes: number;
+    // Ultimos 7 dias; el ultimo es hoy.
+    byDay: { day: string; minutes: number }[];
+  };
+  attentionAreas: { title: string; detail: string; status: 'reinforce' | 'pending' }[];
+  recentActivity: { exerciseTitle: string; courseId: string | null; courseName: string | null; correct: boolean; at: string }[];
+  errorsByUnit: { topic: string; errors: number }[];
+}
+
 export interface ProgressByCourseResult {
   progress: CourseProgressSummary[];
   weeklyXp: number[];
+  // Estadisticas de todos los cursos juntos y por curso (courseId).
+  stats: { overall: StudentStats; byCourse: Record<string, StudentStats> };
+  gamification: Gamification;
 }
 
 export async function fetchMyProgressByCourse(token: string): Promise<ProgressByCourseResult> {

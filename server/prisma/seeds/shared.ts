@@ -43,8 +43,8 @@ export interface SeedCourseSpec {
 export async function upsertCourse(spec: SeedCourseSpec) {
   const course = await prisma.course.upsert({
     where: { slug: spec.slug },
-    update: { title: spec.title, description: spec.description },
-    create: { slug: spec.slug, title: spec.title, description: spec.description },
+    update: { title: spec.title, description: spec.description, language: spec.language },
+    create: { slug: spec.slug, title: spec.title, description: spec.description, language: spec.language },
   });
 
   for (let unitIndex = 0; unitIndex < spec.units.length; unitIndex++) {

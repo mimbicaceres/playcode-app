@@ -24,9 +24,21 @@ export function splitCourseIds(courseIds: string[]): { staticIds: string[]; dyna
 // datos todavia (Fase B), asi que se derivan del lenguaje de sus ejercicios.
 // Independiente de mockData.
 function courseStyle(content: CourseContent) {
-  const language = content.units.flatMap((u) => u.exercises)[0]?.language ?? 'python';
+  // El lenguaje es del curso (si no, el del primer ejercicio, para cursos sin dato).
+  const language = content.language ?? content.units.flatMap((u) => u.exercises)[0]?.language ?? 'python';
   const info = languageInfo(language);
-  return { category: info.category, tag: info.category, color: info.color, accentBorder: info.color, iconName: info.iconName };
+  // Lo elegido al crear el curso manda; si no, se usa lo propio del lenguaje.
+  const category = content.category?.trim() || info.category;
+  const color = content.color || info.color;
+  return {
+    category,
+    tag: category,
+    color,
+    accentBorder: color,
+    iconName: content.iconName || info.iconName,
+    ...(content.level ? { level: content.level } : {}),
+    ...(content.estimatedHours ? { estimatedHours: content.estimatedHours } : {}),
+  };
 }
 
 function toFrontendExercise(exercise: CourseContent['units'][number]['exercises'][number], unitId: string): Exercise {

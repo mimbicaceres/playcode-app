@@ -42,6 +42,8 @@ model User {
   courseAssignments CourseAssignment[]
   // New relation for exercise progress
   exerciseProgresses ExerciseProgress[]
+  // Historial de intentos (cada vez que el alumno ejecuta y verifica su codigo).
+  exerciseAttempts   ExerciseAttempt[]
 }
 
 // Datos generales del instituto (un solo registro global: esta plataforma
@@ -51,6 +53,14 @@ model Institute {
   name         String?
   address      String?
   contactEmail String?
+  // Ajustes de gamificacion (los configura el admin en Configuracion):
+  // XP otorgado = (rewardXp del ejercicio + baseXp) x xpMultiplier, y ademas
+  // streakBonusXp la primera vez que el alumno completa un ejercicio en el dia.
+  xpMultiplier   Float    @default(1)
+  baseXp         Int      @default(0)
+  streakBonusXp  Int      @default(0)
+  // Ids de logros desactivados (no se muestran ni se desbloquean).
+  disabledBadges String[] @default([])
   updatedAt    DateTime @updatedAt
 }
 
@@ -59,6 +69,18 @@ model Course {
   slug        String   @unique
   title       String?
   description String?
+  // Lenguaje del curso (python | javascript | sql | html): define el ejecutor,
+  // la categoria que ve el alumno y el lenguaje por defecto de sus ejercicios.
+  language    String   @default("python")
+  // Opciones para identificar y presentar el curso (todas opcionales):
+  // categoria libre (p. ej. "Java"), nivel, duracion estimada, icono (nombre de Material
+  // Symbols) y color (#RRGGBB). Sin ellas se usan las del lenguaje.
+  category       String?
+  level          String?
+  estimatedHours Int?
+  iconName       String?
+  color          String?
+
   units       Unit[]
   assignments CourseAssignment[]
   progresses ExerciseProgress[]
@@ -164,4 +186,30 @@ model ExerciseProgress {
   // Índices y unicidad
   @@unique([userId, exerciseId])               // un solo registro por usuario‑ejercicio
   @@index([courseId, unitId])                  // búsquedas por curso / unidad
+}
+
+// ----------------------------------------------------
+// HISTORIAL DE INTENTOS
+// ----------------------------------------------------
+// Una fila por cada vez que el alumno verifica su codigo (acierte o no). De aca
+// salen la precision, la actividad reciente, el tiempo de practica y las
+// areas que requieren atencion. ExerciseProgress sigue siendo el resumen por
+// ejercicio (intentos, completado, XP).
+model ExerciseAttempt {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  exerciseId  String
+  unitId      String?
+  courseId    String?
+  success     Boolean
+  // Tiempo activo (en segundos) que el alumno estuvo en el ejercicio hasta este
+  // intento, informado por el navegador. Null = sin dato (se estima).
+  durationSec Int?
+  // Lineas no vacias del codigo enviado.
+  lines       Int?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([courseId, unitId])
 }

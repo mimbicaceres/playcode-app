@@ -4,7 +4,7 @@ import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord, ReportsData
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, CourseProgressSummary, RegisterData, TeachingCourse, clearToken, fetchCourseContent, fetchInstituteReport, fetchMe, fetchMyCourses,
+  ApiError, CourseProgressSummary, Gamification, ProgressByCourseResult, RegisterData, StudentStats, TeachingCourse, clearToken, fetchCourseContent, fetchInstituteReport, fetchMe, fetchMyCourses,
   fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest, registerRequest,
   storeToken, toUserProfile, updateMyAvatarRequest,
 } from './auth/api';
@@ -13,7 +13,7 @@ import { buildDemoInstitute, initialDemoInstituteState } from './data/demoInstit
 import { catalogCoursesFor } from './data/codixCatalog';
 import { splitCourseIds, toFrontendCourse } from './data/dynamicCourses';
 import { buildTeacherCourses, buildTeacherCourseReport, buildTeacherOverallReport, EMPTY_REPORTS } from './data/realTeacherData';
-import { buildStudentReports } from './data/realStudentData';
+import { buildStudentReports, toAchievementBadges } from './data/realStudentData';
 import { Navigation } from './components/Navigation';
 import { AccessDeniedView } from './components/AccessDeniedView';
 import { AdminHomeView } from './components/AdminHomeView';
@@ -74,7 +74,10 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   // y en el seguimiento individual del docente.
   const [myProgressByCourse, setMyProgressByCourse] = useState<CourseProgressSummary[]>([]);
   const [myWeeklyXp, setMyWeeklyXp] = useState<number[]>([]);
-  const [studentProgressByCourse, setStudentProgressByCourse] = useState<Map<string, CourseProgressSummary[]>>(new Map());
+  const [studentProgressByCourse, setStudentProgressByCourse] = useState<Map<string, ProgressByCourseResult>>(new Map());
+  // Estadisticas (precision, tiempo de practica, actividad) y gamificacion (nivel, logros) propias.
+  const [myStats, setMyStats] = useState<{ overall: StudentStats; byCourse: Record<string, StudentStats> } | null>(null);
+  const [myGamification, setMyGamification] = useState<Gamification | null>(null);
   const [studentWeeklyXp, setStudentWeeklyXp] = useState<Map<string, number[]>>(new Map());
   // Real teacher context: the course selected with "Ver curso" (Alumnos, Progreso
   // and Reporte refer to it) and the student opened with "Ver progreso".
@@ -141,6 +144,19 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   }, [isTeacherSession, user?.id]);
 
   const isRealStudentSession = !isDemo && user?.role === 'student';
+  // Ultimo curso al que entro el alumno (se recuerda en este navegador): el inicio
+  // lo muestra como curso destacado con su progreso real.
+  const lastCourseKey = user ? `codix_last_course:${user.id}` : null;
+  const [lastOpenedCourseId, setLastOpenedCourseId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!lastCourseKey) return;
+    try { setLastOpenedCourseId(localStorage.getItem(lastCourseKey)); } catch { /* sin almacenamiento */ }
+  }, [lastCourseKey]);
+  useEffect(() => {
+    if (!isRealStudentSession || !selectedCourse || !lastCourseKey) return;
+    try { localStorage.setItem(lastCourseKey, selectedCourse.id); } catch { /* sin almacenamiento */ }
+    setLastOpenedCourseId(selectedCourse.id);
+  }, [selectedCourse?.id]);
   // Pide al backend el contenido real de los cursos dinamicos (los que no
   // estan en el catalogo estatico) asignados al alumno, o a cargo del
   // docente. Se puede volver a llamar (ej. tras completar un ejercicio) para
@@ -167,8 +183,13 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
 
     if (isRealStudentSession) {
       fetchMyProgressByCourse(token)
-        .then((result) => { setMyProgressByCourse(result.progress); setMyWeeklyXp(result.weeklyXp); })
-        .catch(() => { setMyProgressByCourse([]); setMyWeeklyXp([]); });
+        .then((result) => {
+          setMyProgressByCourse(result.progress);
+          setMyWeeklyXp(result.weeklyXp);
+          setMyStats(result.stats);
+          setMyGamification(result.gamification);
+        })
+        .catch(() => { setMyProgressByCourse([]); setMyWeeklyXp([]); setMyStats(null); setMyGamification(null); });
     }
   };
 
@@ -190,12 +211,13 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     Promise.all(
       studentIds.map((id) =>
         fetchStudentProgressByCourse(token, id)
-          .then((result): [string, CourseProgressSummary[], number[]] => [id, result.progress, result.weeklyXp])
-          .catch((): [string, CourseProgressSummary[], number[]] => [id, [], []]),
+          .then((result): [string, ProgressByCourseResult | null] => [id, result])
+          .catch((): [string, ProgressByCourseResult | null] => [id, null]),
       ),
     ).then((entries) => {
-      setStudentProgressByCourse(new Map(entries.map(([id, progress]) => [id, progress])));
-      setStudentWeeklyXp(new Map(entries.map(([id, , weeklyXp]) => [id, weeklyXp])));
+      const ok = entries.filter((e): e is [string, ProgressByCourseResult] => e[1] !== null);
+      setStudentProgressByCourse(new Map(ok));
+      setStudentWeeklyXp(new Map(ok.map(([id, result]) => [id, result.weeklyXp])));
     });
   }, [isTeacherSession, teaching]);
 
@@ -224,6 +246,12 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
       const { user: apiUser } = await fetchMe(token);
       // Update global user state with fresh data from backend
       setUser(toUserProfile(apiUser));
+      // Tambien el progreso, las estadisticas y la gamificacion (nivel, logros).
+      const result = await fetchMyProgressByCourse(token);
+      setMyProgressByCourse(result.progress);
+      setMyWeeklyXp(result.weeklyXp);
+      setMyStats(result.stats);
+      setMyGamification(result.gamification);
     } catch (err) {
       console.error('Failed to refresh user after exercise:', err);
     }
@@ -321,7 +349,13 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   }
   const isDenied = !!user && !canAccessView(currentView, user.role, isDemo);
 
-  const viewUser = isDemo ? demoUser : user;
+  // Progreso general real del alumno: ejercicios completados sobre el total de sus cursos.
+  const realGeneralProgress = (() => {
+    const total = myProgressByCourse.reduce((sum, p) => sum + p.totalExercises, 0);
+    const done = myProgressByCourse.reduce((sum, p) => sum + p.completedExercises, 0);
+    return total > 0 ? Math.round((done / total) * 100) : 0;
+  })();
+  const viewUser = isDemo ? demoUser : user && user.role === 'student' ? { ...user, generalProgress: realGeneralProgress } : user;
   const isRealTeacher = !isDemo && user?.role === 'teacher';
   // Demo teacher panel (/demo/docente...): same teacher views, fed with the demo institute.
   const isDemoTeacher = isDemo && demoPerspective === 'teacher';
@@ -353,10 +387,11 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     ? activeUnit.exercises.find((e) => e.id === selectedExerciseId) ?? activeUnit.exercises[0] ?? null
     : null;
 
-  // Suma, dia por dia, el XP semanal de un grupo de alumnos (para los
+  // Suma, semana por semana, el XP de un grupo de alumnos (para los
   // reportes de docente: por curso o de todos sus cursos juntos).
   const sumWeeklyXp = (studentIds: string[]): number[] => {
-    const totals = new Array(7).fill(0);
+    // Una suma por semana (5 semanas, la ultima es la actual).
+    const totals = new Array(5).fill(0);
     for (const id of studentIds) {
       const xp = studentWeeklyXp.get(id);
       if (!xp) continue;
@@ -467,6 +502,9 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
               setSelectedCourse(course);
               setCurrentView('course_roadmap');
             }}
+            gamification={isRealStudent ? myGamification : undefined}
+            stats={isRealStudent ? myStats?.overall : undefined}
+            lastCourseId={isRealStudent ? lastOpenedCourseId ?? myStats?.overall.recentActivity[0]?.courseId ?? null : undefined}
           />
         )}
 
@@ -626,14 +664,15 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
               />
             )
           ) : (
-            <ReportsAnalyticsView data={buildStudentReports(user, myProgressByCourse, myWeeklyXp)} />
+            <ReportsAnalyticsView data={buildStudentReports(user, myProgressByCourse, myWeeklyXp, myStats?.overall)} />
           )
         )}
 
                {activeView === 'profile' && viewUser && !isRealTeacher && (
           <StudentProfileView
             user={viewUser}
-            badges={isDemo ? BADGES : REAL_BADGES}
+            badges={isDemo ? BADGES : isRealStudent && myGamification ? toAchievementBadges(myGamification) : REAL_BADGES}
+            gamification={isRealStudent ? myGamification : undefined}
             courses={isRealStudent ? visibleCourses : undefined}
             onOpenCourse={(course) => {
               setSelectedCourse(course);

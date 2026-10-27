@@ -40,6 +40,13 @@ export interface CourseContent {
   slug: string;
   title: string | null;
   description: string | null;
+  // Lenguaje del curso (python | javascript | sql | html): define la categoria y el color de la tarjeta.
+  language: string;
+  category: string | null;
+  level: string | null;
+  estimatedHours: number | null;
+  iconName: string | null;
+  color: string | null;
   progressPercent: number;
   units: CourseContentUnit[];
 }
@@ -129,6 +136,12 @@ export async function getCourseContent(courseId: string, userId: string): Promis
     slug: course.slug,
     title: course.title,
     description: course.description,
+    language: course.language,
+    category: course.category,
+    level: course.level,
+    estimatedHours: course.estimatedHours,
+    iconName: course.iconName,
+    color: course.color,
     progressPercent,
     units,
   };

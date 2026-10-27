@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Course, ScreenView, UserProfile } from '../types';
 import { DEMO_STUDENT_HOME, MASCOT_IMAGES } from '../data/mockData';
+import { Gamification, StudentStats } from '../auth/api';
+import { timeAgo } from '../lib/timeFormat';
 
 interface StudentDashboardProps {
   user: UserProfile;
@@ -9,6 +11,11 @@ interface StudentDashboardProps {
   // mode) the example content from DEMO_STUDENT_HOME is shown.
   courses?: Course[];
   onOpenCourse?: (course: Course) => void;
+  // Real students: nivel y logros (gamificacion), estadisticas y el ultimo curso
+  // en el que trabajo, calculados con su avance real.
+  gamification?: Gamification | null;
+  stats?: StudentStats | null;
+  lastCourseId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +67,23 @@ const BannerStat: React.FC<{
     <div className="leading-tight">
       <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">{label}</p>
       <p className="font-heading font-extrabold text-sm text-white whitespace-nowrap">{value}</p>
+    </div>
+  </div>
+);
+
+/** Nivel del alumno con la barra de XP hacia el proximo nivel. */
+const LevelStat: React.FC<{ gamification: Gamification }> = ({ gamification: g }) => (
+  <div
+    className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-3 py-1.5 min-w-0"
+    title={`Te faltan ${g.xpToNextLevel} XP para el nivel ${g.level + 1}`}
+  >
+    <span className="material-symbols-outlined text-violet-300 text-xl fill">military_tech</span>
+    <div className="leading-tight min-w-[110px]">
+      <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Nivel {g.level} · {g.levelTitle}</p>
+      <div className="mt-1 h-1.5 rounded-full bg-white/15 overflow-hidden">
+        <div className="h-full rounded-full bg-gradient-to-r from-violet-400 to-amber-300" style={{ width: `${g.percentToNextLevel}%` }} />
+      </div>
+      <p className="text-[10px] text-blue-100/80 mt-0.5 whitespace-nowrap">{g.xpIntoLevel} / {g.nextLevelXp - g.levelStartXp} XP</p>
     </div>
   </div>
 );
@@ -161,9 +185,11 @@ const CompactProgress: React.FC<{ percent: number; label: string }> = ({ percent
  * @param courses Cursos asignados al estudiante (opcional; sin él se muestra la demo).
  * @param onOpenCourse Callback para abrir un curso seleccionado.
  */
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate, courses, onOpenCourse }) => {
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavigate, courses, onOpenCourse, gamification, stats, lastCourseId }) => {
   const isDemo = !courses;
-  const firstCourse = courses?.[0];
+  // Curso destacado: el ultimo en el que trabajo el alumno (si no hay dato, el primero asignado).
+  const featuredCourse = courses?.find((c) => c.id === lastCourseId) ?? courses?.[0];
+  const hasActivity = !!stats && stats.totalAttempts > 0;
 
   // Tip of the day: only shown as a floating message when the lightbulb is pressed.
   const [showTip, setShowTip] = useState(false);
@@ -193,16 +219,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
       primaryLabel: 'Continuar lección',
       secondary: { label: 'Ver contenido', icon: 'list_alt', onClick: () => onNavigate('unit_detail') },
     };
-  } else if (firstCourse) {
+  } else if (featuredCourse) {
     hero = {
-      tag: firstCourse.tag,
-      tagIcon: firstCourse.iconName,
-      title: firstCourse.title,
-      description: firstCourse.description,
-      percent: 0,
-      progressLabel: 'Progreso del curso',
-      onOpen: () => onOpenCourse?.(firstCourse),
-      primaryLabel: 'Ver curso',
+      tag: featuredCourse.tag,
+      tagIcon: featuredCourse.iconName,
+      title: featuredCourse.title,
+      description: featuredCourse.description,
+      // Progreso real del curso: ejercicios completados sobre el total.
+      percent: featuredCourse.progressPercent,
+      progressLabel: `Progreso del curso · ${featuredCourse.completedLessons} de ${featuredCourse.totalLessons} ejercicios`,
+      onOpen: () => onOpenCourse?.(featuredCourse),
+      primaryLabel: featuredCourse.progressPercent > 0 ? 'Continuar curso' : 'Empezar curso',
     };
   }
   const heroPrimaryAction = isDemo ? () => onNavigate('exercise') : hero?.onOpen;
@@ -237,8 +264,32 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
   const courseCount = isDemo ? DEMO_STUDENT_HOME.courses.length : (courses?.length ?? 0);
 
   // ----- Achievements / activity (empty for real students, who have no data yet) -----
-  const achievements = isDemo ? DEMO_STUDENT_HOME.achievements : [];
-  const activity = isDemo ? DEMO_STUDENT_HOME.activity : [];
+  // Logros: los ultimos desbloqueados; si todavia no hay, los mas cercanos con su progreso.
+  const realBadges = [...(gamification?.badges ?? [])];
+  const unlockedBadges = realBadges
+    .filter((b) => b.unlocked)
+    .sort((a, b) => (b.unlockedAt ?? '').localeCompare(a.unlockedAt ?? ''));
+  const nextBadges = realBadges
+    .filter((b) => !b.unlocked)
+    .sort((a, b) => b.current / b.target - a.current / a.target);
+  const achievements = isDemo
+    ? DEMO_STUDENT_HOME.achievements
+    : [...unlockedBadges, ...nextBadges].slice(0, 4).map((b) => ({
+        id: b.id,
+        title: b.unlocked ? b.title : `${b.title} ${b.current}/${b.target}`,
+        iconName: b.unlocked ? b.iconName : 'lock',
+        color: b.unlocked ? b.color : '#737686',
+        unlocked: b.unlocked,
+      }));
+  const activity = isDemo
+    ? DEMO_STUDENT_HOME.activity
+    : (stats?.recentActivity ?? []).slice(0, 4).map((a, i) => ({
+        id: `${a.at}-${i}`,
+        text: `${a.correct ? 'Resolviste' : 'Intentaste'} ${a.exerciseTitle}`,
+        timeAgo: timeAgo(a.at),
+        iconName: a.correct ? 'check_circle' : 'error',
+        color: a.correct ? '#059669' : '#dc2626',
+      }));
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-28 md:pb-5 flex-1 flex flex-col gap-4">
@@ -267,6 +318,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
         {/* Right side: stats, a divider and the tip lightbulb */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <div className="flex flex-wrap items-center gap-2.5">
+            {gamification && <LevelStat gamification={gamification} />}
             <BannerStat icon="🔥" label="Racha" value={`${user.streakDays} días`} />
             <BannerStat
               icon={<span className="material-symbols-outlined text-amber-400 text-xl fill">stars</span>}
@@ -321,7 +373,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onNavi
           <section className="lg:col-span-7 flex flex-col gap-2 min-w-0">
             <div className="flex items-center justify-between">
               <h2 className="font-heading font-bold text-base text-[#0b1c30]">
-                {isDemo ? 'Continuar aprendiendo' : 'Empezá a aprender'}
+                {isDemo || hasActivity ? 'Continuar aprendiendo' : 'Empezá a aprender'}
               </h2>
               <button
                 onClick={hero.onOpen}

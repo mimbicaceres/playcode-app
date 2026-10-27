@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  AdminCourseSummary, ApiError, ApiUser, InstituteData, createCourseRequest, createExerciseRequest, createUnitRequest,
-  deleteExerciseRequest, fetchAdminCourseContent, fetchAdminCourses, fetchInstitute, fetchUsers, getStoredToken,
+  AdminCourseSummary, ApiError, ApiUser, BadgeCatalogItem, InstituteData, createCourseRequest, createExerciseRequest, createUnitRequest,
+  deleteExerciseRequest, fetchAdminCourseContent, fetchAdminCourses, fetchBadgeCatalog, fetchInstitute, fetchUsers, getStoredToken,
   setUserActiveRequest, setUserCoursesRequest, updateExerciseRequest, updateInstituteRequest, updateUserRequest,
 } from '../auth/api';
 import { buildAdminInstituteData } from '../data/realAdminData';
@@ -45,6 +45,8 @@ const [isCreateTeacherOpen, setIsCreateTeacherOpen] = useState(false);
   const [isCreateStudentOpen, setIsCreateStudentOpen] = useState(false);
   /** Datos generales del instituto (pestaña Configuración). */
   const [institute, setInstitute] = useState<InstituteData | undefined>(undefined);
+  /** Catalogo de logros (para activarlos o desactivarlos en Configuración). */
+  const [badgeCatalog, setBadgeCatalog] = useState<BadgeCatalogItem[] | undefined>(undefined);
   /** Mensaje de éxito que se muestra temporalmente al crear o actualizar datos. */
 const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -82,6 +84,7 @@ useEffect(loadUsers, []);
     const token = getStoredToken();
     if (!token) return;
     fetchInstitute(token).then(setInstitute).catch(() => {});
+    fetchBadgeCatalog(token).then(setBadgeCatalog).catch(() => {});
   }, []);
 
   const data = useMemo(() => buildAdminInstituteData(users ?? [], dbCourses), [users, dbCourses]);
@@ -146,7 +149,18 @@ const actions: AdminInstituteActions = {
     updateUser: (id, values) => saveUser((token) => updateUserRequest(token, id, values)),
     setUserActive: (id, isActive) => saveUser((token) => setUserActiveRequest(token, id, isActive)),
     setUserCourses: (id, courseIds) => saveUser((token) => setUserCoursesRequest(token, id, courseIds)),
-    createCourse: (courseData) => runCourseAction((token) => createCourseRequest(token, courseData)),
+    createCourse: async (courseData) => {
+      const token = getStoredToken();
+      if (!token) return { error: 'Tu sesión expiró. Volvé a iniciar sesión.' };
+      try {
+        const course = await createCourseRequest(token, courseData);
+        loadCourses();
+        return { error: null, courseId: course.id };
+      } catch (error) {
+        return { error: actionError(error) };
+      }
+    },
+    refreshCourses: loadCourses,
     fetchCourseContent: (courseId) => {
       const token = getStoredToken();
       if (!token) return Promise.reject(new Error('Tu sesión expiró. Volvé a iniciar sesión.'));
@@ -156,6 +170,16 @@ const actions: AdminInstituteActions = {
     createExercise: (unitId, exerciseData) => runCourseAction((token) => createExerciseRequest(token, unitId, exerciseData)),
     updateExercise: (exerciseId, exerciseData) => runCourseAction((token) => updateExerciseRequest(token, exerciseId, exerciseData)),
     deleteExercise: (exerciseId) => runCourseAction((token) => deleteExerciseRequest(token, exerciseId)),
+    updateGamification: async (settings) => {
+      const token = getStoredToken();
+      if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
+      try {
+        setInstitute(await updateInstituteRequest(token, settings));
+        return null;
+      } catch (error) {
+        return actionError(error);
+      }
+    },
     updateInstitute: async (instituteData) => {
       const token = getStoredToken();
       if (!token) return 'Tu sesión expiró. Volvé a iniciar sesión.';
@@ -195,6 +219,7 @@ const banner = successMessage && (
         onViewStudentProgress={onViewStudentProgress}
         banner={banner}
         institute={institute}
+        badgeCatalog={badgeCatalog}
         usersEmptyMessage={
           loadError
             ? 'No se pudieron cargar los usuarios. Intentá de nuevo.'

@@ -1,27 +1,8 @@
-import { Course, Unit, Exercise } from '../types';
-import { COURSES_DATA } from './mockData';
+import { Course } from '../types';
 
-// CODIX course catalog for real accounts: the predefined courses (content
-// only), without the example progress of mockData. Every real user starts at
-// zero; ids match server/src/lib/codixCourses.ts.
-export const CODIX_CATALOG: Course[] = COURSES_DATA.map((course) => ({
-  ...course,
-  progressPercent: 0,
-  completedLessons: 0,
-  // Assigned by an administrator, so it is never locked for the user.
-  status: 'available',
-  units: course.units.map((unit: Unit, unitIndex: number) => ({
-    ...unit,
-    progressPercent: 0,
-    status: unitIndex === 0 ? 'active' : 'locked',
-    exercises: unit.exercises.map((exercise: Exercise) => ({ ...exercise, status: 'locked' })),
-  })),
-}));
-
-export const findCatalogCourse = (id: string) => CODIX_CATALOG.find((c) => c.id === id);
-
-// Assigned course ids → catalog courses (unknown ids are ignored).
-export const catalogCoursesFor = (courseIds: string[]) =>
-  courseIds.map(findCatalogCourse).filter((c): c is Course => !!c);
-
-export const countActivities = (course: Course) => course.units.reduce((sum, u) => sum + u.exercises.length, 0);
+// Antes aca vivian los 5 cursos del catalogo CODIX (prog1, py2, java3, js_base,
+// css_modern), con contenido fijo y sin ejercicios reales. Fueron reemplazados
+// por los cursos reales de la base de datos (Python, JavaScript, SQL y HTML/CSS)
+// y se dieron de baja: ver server/prisma/seeds/catalog.ts. La lista queda vacia
+// para que el resto del codigo que la consulta siga funcionando.
+export const CODIX_CATALOG: Course[] = [];

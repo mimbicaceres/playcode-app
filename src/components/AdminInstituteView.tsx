@@ -1,10 +1,12 @@
+import { AdminCourseBuilder } from './AdminCourseBuilder';
+import { languageLabel } from '../lib/exerciseAuthoring';
 import React, { useEffect, useState } from 'react';
 import { AdminInstituteData, UserRole } from '../types';
-import type { AdminCourseContent, ExerciseFormInput, InstituteData, UserEditData } from '../auth/api';
+import type { AdminCourseContent, CreateCourseInput, ExerciseFormInput, InstituteData, UserEditData } from '../auth/api';
 import { StatusHud } from './ui/StatusHud';
 import {
   AssignCoursesModal, CourseAssignModal, CourseDetailModal, CreateCourseModal, EditUserModal,
-  ManageCourseContentModal, ToggleActiveModal, UserProfileModal,
+  ToggleActiveModal, UserProfileModal,
 } from './Modals/AdminInstituteModals';
 
 // Admin actions. The real panel saves them in the backend; the demo saves them
@@ -19,7 +21,9 @@ export interface AdminInstituteActions {
   setUserActive: (userId: string, isActive: boolean) => Promise<string | null>;
   setUserCourses: (userId: string, courseIds: string[]) => Promise<string | null>;
   // Fase B: contenido de cursos dinamicos (creados en la propia plataforma).
-  createCourse?: (data: { title: string; description?: string }) => Promise<string | null>;
+  createCourse?: (data: CreateCourseInput) => Promise<{ error: string | null; courseId?: string }>;
+  // Vuelve a pedir los cursos (contadores y listas) despues de editar uno en el creador.
+  refreshCourses?: () => void;
   fetchCourseContent?: (courseId: string) => Promise<AdminCourseContent>;
   createUnit?: (courseId: string, title: string) => Promise<string | null>;
   createExercise?: (unitId: string, data: ExerciseFormInput) => Promise<string | null>;
@@ -28,6 +32,25 @@ export interface AdminInstituteActions {
   // Datos del instituto (pestaña Configuración). Opcional: sin esto, esos
   // campos quedan deshabilitados como antes (ej. en el panel demo).
   updateInstitute?: (data: { name?: string; address?: string; contactEmail?: string }) => Promise<string | null>;
+  // Ajustes de gamificacion (XP y logros). Sin esto (panel demo) se muestra como antes.
+  updateGamification?: (settings: GamificationSettingsInput) => Promise<string | null>;
+}
+
+// Ajustes de gamificacion que guarda el admin (ver server/src/lib/gamificationSettings.ts).
+export interface GamificationSettingsInput {
+  xpMultiplier: number;
+  baseXp: number;
+  streakBonusXp: number;
+  disabledBadges: string[];
+}
+
+export interface BadgeCatalogItem {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+  color: string;
+  bgColor: string;
 }
 
 interface AdminInstituteViewProps {
@@ -45,6 +68,8 @@ interface AdminInstituteViewProps {
   // Datos del instituto (pestaña Configuración); sin esto, los campos
   // quedan deshabilitados (ej. en el panel demo).
   institute?: InstituteData;
+  // Catalogo de logros para activarlos o desactivarlos (Configuracion > Gamificacion).
+  badgeCatalog?: BadgeCatalogItem[];
 }
 
 // The general report is the "Reporte" section of the top navbar.
@@ -104,6 +129,7 @@ export const AdminInstituteView: React.FC<AdminInstituteViewProps> = ({
   banner,
   usersEmptyMessage = 'Sin usuarios para mostrar.',
   institute,
+  badgeCatalog,
 }) => {
   /** Pestaña activa del panel: usuarios, cursos, actividades o configuración. */
 const [activeTab, setActiveTab] = useState<AdminTab>('users');
@@ -127,9 +153,22 @@ const [activeTab, setActiveTab] = useState<AdminTab>('users');
 const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   /** Texto de búsqueda ingresado para filtrar usuarios por nombre o email. */
 const [searchQuery, setSearchQuery] = useState('');
-  /** Multiplicador global de XP para la gamificación. */
-const [xpMultiplier, setXpMultiplier] = useState(data.gamification.xpMultiplier);
-  /** Bandera que muestra temporalmente el aviso de guardado exitoso de la configuración. */
+  /** Ajustes de gamificación (se cargan del servidor y se guardan con "Guardar configuración"). */
+const [xpMultiplier, setXpMultiplier] = useState(institute?.xpMultiplier ?? data.gamification.xpMultiplier);
+  const [baseXp, setBaseXp] = useState(institute?.baseXp ?? data.gamification.baseXp);
+  const [streakBonusXp, setStreakBonusXp] = useState(institute?.streakBonusXp ?? data.gamification.streakBonusXp);
+  const [disabledBadges, setDisabledBadges] = useState<string[]>(institute?.disabledBadges ?? []);
+  const [gamificationBusy, setGamificationBusy] = useState(false);
+  const [gamificationError, setGamificationError] = useState<string | null>(null);
+  const [gamificationSaved, setGamificationSaved] = useState(false);
+  useEffect(() => {
+    if (!institute) return;
+    setXpMultiplier(institute.xpMultiplier ?? 1);
+    setBaseXp(institute.baseXp ?? 0);
+    setStreakBonusXp(institute.streakBonusXp ?? 0);
+    setDisabledBadges(institute.disabledBadges ?? []);
+  }, [institute]);
+  /** Bandera que muestra temporalmente el aviso del panel demo (donde no se guarda nada). */
 const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
   /** Estado que controla el modal abierto y sus parámetros. */
 const [modal, setModal] = useState<OpenModal | null>(null);
@@ -156,10 +195,24 @@ const filteredUsers = data.users.filter((u) => {
   });
 
   /** Handler del formulario de configuración de gamificación; muestra aviso y lo oculta después de 3 s. */
-const handleSaveSettings = (e: React.FormEvent) => {
+const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSettingsNotice(true);
-    setTimeout(() => setSavedSettingsNotice(false), 3000);
+    if (!actions.updateGamification) {
+      // Panel demo: no hay servidor donde guardar.
+      setSavedSettingsNotice(true);
+      setTimeout(() => setSavedSettingsNotice(false), 3000);
+      return;
+    }
+    setGamificationBusy(true);
+    setGamificationError(null);
+    const error = await actions.updateGamification({ xpMultiplier, baseXp, streakBonusXp, disabledBadges });
+    setGamificationBusy(false);
+    if (error) {
+      setGamificationError(error);
+    } else {
+      setGamificationSaved(true);
+      setTimeout(() => setGamificationSaved(false), 3000);
+    }
   };
 
   /** Estadísticas generales del instituto mostradas en tarjetas superiores. */
@@ -383,16 +436,23 @@ const stats = [
             </div>
           </div>
           {data.courses.length === 0 ? (
-            <EmptyCard icon="menu_book" text="Todavía no hay cursos disponibles." detail="Los cursos, unidades y actividades los provee CODIX. Cuando estén disponibles, vas a poder asignarlos a docentes y alumnos desde acá." />
+            <EmptyCard icon="menu_book" text="Todavía no hay cursos." detail="Creá el primero con el botón Crear curso: elegís el lenguaje, cargás unidades y ejercicios, y después lo asignás a docentes y alumnos desde acá." />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
               {data.courses.map((course) => (
                 <div key={course.id} className="p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col gap-3">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-heading font-bold text-base text-[#0b1c30]">{course.name}</h3>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                    <div className="min-w-0">
+                      <h3 className="font-heading font-bold text-base text-[#0b1c30]">{course.name}</h3>
+                      {course.language && (
+                        <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                          {course.category?.trim() || languageLabel(course.language)}
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
                       course.status === 'Activo' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'
-                    }`}>{course.status}</span>
+                    }`}>{course.isDynamic && course.status === 'Inactivo' ? 'Sin asignar' : course.status}</span>
                   </div>
                   <p className="text-xs text-slate-500">Docente: {course.teacherName ?? 'Sin asignar'}</p>
                   <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
@@ -410,7 +470,7 @@ const stats = [
                   <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                     <RowAction icon="visibility" title="Ver curso" onClick={() => setModal({ type: 'course', courseId: course.id })} />
                     {course.isDynamic && actions.fetchCourseContent && (
-                      <RowAction icon="edit_note" title="Gestionar contenido" onClick={() => setModal({ type: 'manageCourse', courseId: course.id })} />
+                      <RowAction icon="edit_note" title="Editar curso (unidades y ejercicios)" onClick={() => setModal({ type: 'manageCourse', courseId: course.id })} />
                     )}
                     <RowAction icon="playlist_add" title="Asignar curso" onClick={() => setModal({ type: 'assign', courseId: course.id })} />
                   </div>
@@ -581,34 +641,96 @@ const stats = [
                   <label className="text-xs font-bold text-slate-700">XP Base por Ejercicio</label>
                   <input
                     type="number"
-                    defaultValue={data.gamification.baseXp}
+                    min={0}
+                    max={1000}
+                    value={baseXp}
+                    onChange={(e) => setBaseXp(Math.max(0, Math.round(Number(e.target.value) || 0)))}
                     className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-600 transition-colors"
                   />
+                  <span className="text-[11px] text-slate-500">Se suma al XP de cada ejercicio.</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-slate-700">Bonus por Racha Diaria (XP)</label>
                   <input
                     type="number"
-                    defaultValue={data.gamification.streakBonusXp}
+                    min={0}
+                    max={1000}
+                    value={streakBonusXp}
+                    onChange={(e) => setStreakBonusXp(Math.max(0, Math.round(Number(e.target.value) || 0)))}
                     className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-blue-600 transition-colors"
                   />
+                  <span className="text-[11px] text-slate-500">Se gana al resolver el primer ejercicio de cada día.</span>
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-slate-700">Insignias</p>
-                  <p className="text-[11px] text-slate-500">La gestión de insignias estará disponible próximamente.</p>
+              {/* Ejemplo en vivo de cuanto XP otorga un ejercicio con estos ajustes */}
+              <p className="text-[11px] text-slate-600 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+                Con estos valores, un ejercicio de 10 XP otorga{' '}
+                <strong>{Math.max(0, Math.round((10 + baseXp) * xpMultiplier))} XP</strong>
+                {streakBonusXp > 0 && <> (+{streakBonusXp} XP el primero de cada día)</>}.
+              </p>
+
+              {badgeCatalog ? (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-slate-700">Insignias</p>
+                    <p className="text-[11px] text-slate-500">
+                      Desmarcá las que no quieras usar: dejan de mostrarse y de desbloquearse.
+                      {' '}{badgeCatalog.length - disabledBadges.length} de {badgeCatalog.length} activas.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto pr-1">
+                    {badgeCatalog.map((badge) => {
+                      const active = !disabledBadges.includes(badge.id);
+                      return (
+                        <label
+                          key={badge.id}
+                          title={badge.description}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${active ? 'bg-white border-slate-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={() => setDisabledBadges((prev) => (active ? [...prev, badge.id] : prev.filter((id) => id !== badge.id)))}
+                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                          />
+                          <span className="material-symbols-outlined text-lg" style={{ color: badge.color }}>{badge.iconName}</span>
+                          <span className="font-semibold text-slate-700 truncate">{badge.title}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-                <span className="material-symbols-outlined text-2xl text-slate-300">military_tech</span>
-              </div>
+              ) : (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-700">Insignias</p>
+                    <p className="text-[11px] text-slate-500">La gestión de insignias no está disponible en el panel de ejemplo.</p>
+                  </div>
+                  <span className="material-symbols-outlined text-2xl text-slate-300">military_tech</span>
+                </div>
+              )}
+
+              {gamificationError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                  <span className="material-symbols-outlined text-red-600 text-[18px]">error</span>
+                  <p className="text-xs font-medium">{gamificationError}</p>
+                </div>
+              )}
+              {gamificationSaved && (
+                <p className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  Configuración guardada: se aplica a los próximos ejercicios que resuelvan los alumnos.
+                </p>
+              )}
 
               <div className="pt-3 border-t border-slate-100 flex justify-end">
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+                  disabled={gamificationBusy}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Guardar Configuración
+                  {gamificationBusy ? 'Guardando...' : 'Guardar Configuración'}
                 </button>
               </div>
             </form>
@@ -670,21 +792,26 @@ const stats = [
       )}
       {modal?.type === 'createCourse' && actions.createCourse && (
         <CreateCourseModal
+          existingCourses={data.courses.filter((c) => c.isDynamic).map((c) => ({ id: c.id, name: c.name, language: c.language }))}
           onClose={closeModal}
-          onSave={(data) => withNotice('Curso creado.', () => actions.createCourse!(data))}
+          onCreate={actions.createCourse}
+          onCreated={(courseId) => {
+            setNotice('Curso creado. Cargale unidades y ejercicios.');
+            setModal({ type: 'manageCourse', courseId });
+          }}
         />
       )}
-      {modal?.type === 'manageCourse' && actions.fetchCourseContent && actions.createUnit && actions.createExercise
-        && actions.updateExercise && actions.deleteExercise && (
-        <ManageCourseContentModal
+      {modal?.type === 'manageCourse' && actions.fetchCourseContent && (
+        <AdminCourseBuilder
           courseId={modal.courseId}
-          courseName={data.courses.find((c) => c.id === modal.courseId)?.name ?? 'Curso'}
-          fetchContent={actions.fetchCourseContent}
-          onCreateUnit={actions.createUnit}
-          onCreateExercise={actions.createExercise}
-          onUpdateExercise={actions.updateExercise}
-          onDeleteExercise={actions.deleteExercise}
           onClose={closeModal}
+          onChanged={() => actions.refreshCourses?.()}
+          onDeleted={() => {
+            actions.refreshCourses?.();
+            setNotice('Curso eliminado.');
+            closeModal();
+          }}
+          onAssign={(courseId) => setModal({ type: 'assign', courseId })}
         />
       )}
     </div>

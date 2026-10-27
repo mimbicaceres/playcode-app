@@ -1,28 +1,43 @@
 import { prisma } from "../../src/lib/prisma";
-import { CODIX_CATALOG } from "../../src/lib/codixCatalog";
 
-// Filas Course y Unit de los 5 cursos del catalogo CODIX (prog1, py2, java3,
-// js_base, css_modern). Su contenido vive en el front (catalogo estatico), pero
-// las asignaciones (CourseAssignment) apuntan por clave foranea a estas filas:
-// sin ellas, asignar uno de esos cursos desde el admin falla en una base nueva.
+// Cursos del catalogo viejo de CODIX (contenido fijo en el front, sin ejercicios
+// reales en la base). Fueron reemplazados por los cursos reales:
 //
-// La clave primaria es el id del catalogo ("prog1", "u1"), asi que
-// CourseAssignment.courseId y ExerciseProgress.courseId/unitId siguen usando esos
-// ids. Idempotente (upsert).
-export async function seedCatalog() {
-  for (const catalogCourse of CODIX_CATALOG) {
-    const course = await prisma.course.upsert({
-      where: { slug: catalogCourse.id },
-      update: { title: catalogCourse.title, description: catalogCourse.description },
-      create: { id: catalogCourse.id, slug: catalogCourse.id, title: catalogCourse.title, description: catalogCourse.description },
-    });
-    for (const catalogUnit of catalogCourse.units) {
-      await prisma.unit.upsert({
-        where: { slug: catalogUnit.id },
-        update: { title: catalogUnit.title, courseId: course.id },
-        create: { id: catalogUnit.id, slug: catalogUnit.id, title: catalogUnit.title, courseId: course.id },
-      });
-    }
+//   prog1 "Programación 1: HTML & CSS"  -> HTML y CSS: Fundamentos
+//   py2 "Python Básico 2"               -> Python — Fundamentos
+//   java3 "Java Básico 3"               -> (el curso real de Java todavia no esta cargado)
+//   js_base "Fundamentos de JavaScript" -> JavaScript — Fundamentos
+//   css_modern "Diseño Web con CSS"     -> HTML y CSS: Fundamentos
+//
+// `retireLegacyCourses` los da de baja: borra sus asignaciones, el avance que
+// pudiera tener alguien en ellos, sus unidades y los cursos mismos. Es
+// idempotente (si ya no estan, no hace nada) y solo toca estos 5 cursos.
+export const LEGACY_COURSE_SLUGS = ["prog1", "py2", "java3", "js_base", "css_modern"];
+
+export async function retireLegacyCourses() {
+  const courses = await prisma.course.findMany({ where: { slug: { in: LEGACY_COURSE_SLUGS } }, select: { id: true, slug: true } });
+  if (courses.length === 0) {
+    console.log("Cursos viejos del catálogo: ya estaban dados de baja");
+    return;
   }
-  console.log(`Catálogo CODIX: ${CODIX_CATALOG.length} cursos (filas Course/Unit)`);
+  const courseIds = courses.map((c) => c.id);
+
+  const units = await prisma.unit.findMany({ where: { courseId: { in: courseIds } }, select: { id: true } });
+  const unitIds = units.map((u) => u.id);
+  const exerciseCount = await prisma.exercise.count({ where: { unitId: { in: unitIds } } });
+  if (exerciseCount > 0) {
+    // Estos cursos no deberian tener ejercicios reales; si los tienen, no se borra nada.
+    throw new Error(`Los cursos viejos tienen ${exerciseCount} ejercicios en la base: revisalo a mano antes de darlos de baja.`);
+  }
+
+  const progress = await prisma.exerciseProgress.deleteMany({ where: { OR: [{ courseId: { in: courseIds } }, { unitId: { in: unitIds } }] } });
+  const attempts = await prisma.exerciseAttempt.deleteMany({ where: { courseId: { in: courseIds } } });
+  const assignments = await prisma.courseAssignment.deleteMany({ where: { courseId: { in: courseIds } } });
+  const deletedUnits = await prisma.unit.deleteMany({ where: { courseId: { in: courseIds } } });
+  const deletedCourses = await prisma.course.deleteMany({ where: { id: { in: courseIds } } });
+
+  console.log(
+    `Cursos viejos dados de baja: ${deletedCourses.count} cursos (${courses.map((c) => c.slug).join(", ")}), ` +
+      `${deletedUnits.count} unidades, ${assignments.count} asignaciones, ${progress.count} registros de avance, ${attempts.count} intentos`,
+  );
 }

@@ -77,6 +77,8 @@ export function buildAdminInstituteData(users: ApiUser[], dbCourses: AdminCourse
           status: statusFor(activeDbCourses.includes(course)),
           units: course.units,
           isDynamic: true,
+          language: course.language,
+          category: course.category ?? undefined,
         };
       }),
     ],
@@ -90,7 +92,7 @@ export function buildAdminInstituteData(users: ApiUser[], dbCourses: AdminCourse
         difficulty: '—',
         status: 'Activo' as const,
       })))),
-      ...activeDbCourses.flatMap((course) => course.units.flatMap((unit) => unit.exercises.map((exercise) => ({
+      ...dbCourses.flatMap((course) => course.units.flatMap((unit) => unit.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.title,
         courseName: course.title ?? course.id,

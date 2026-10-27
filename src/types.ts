@@ -87,6 +87,9 @@ export interface Course {
   description: string;
   category: string;
   tag: string;
+  // Opciones de presentacion elegidas al crear el curso (cursos reales).
+  level?: string;
+  estimatedHours?: number;
   color: string;
   accentBorder: string;
   iconName: string;
@@ -107,6 +110,10 @@ export interface AchievementBadge {
   bgColor: string;
   unlocked: boolean;
   unlockedAt?: string;
+  // Gamificacion real: que pide el logro y cuanto lleva el alumno (p. ej. 7 de 10).
+  description?: string;
+  current?: number;
+  target?: number;
 }
 
 export interface ActivityItem {
@@ -265,6 +272,10 @@ export interface AdminInstituteCourseRow {
   // Cursos reales (DB), a diferencia de los predefinidos por CODIX: estos
   // se pueden crear/editar desde "Gestionar contenido".
   isDynamic?: boolean;
+  // Lenguaje del curso (python | javascript | sql | html | quiz), solo cursos reales.
+  language?: string;
+  // Categoria elegida al crear el curso (por ejemplo "Java"); si no hay, se muestra el lenguaje.
+  category?: string;
 }
 
 export interface AdminInstituteActivityRow {

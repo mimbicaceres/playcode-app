@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ApiUser, CourseProgressSummary, fetchStudentProgressByCourse, fetchUsers, getStoredToken } from '../auth/api';
+import { ApiUser, ProgressByCourseResult, fetchStudentProgressByCourse, fetchUsers, getStoredToken } from '../auth/api';
 import { buildStudentProgressRecord } from '../data/realStudentData';
 import { StudentProgressView } from './StudentProgressView';
 
@@ -13,7 +13,7 @@ const [users, setUsers] = useState<ApiUser[] | null>(null);
   /** Indica si ocurrió un error al cargar los usuarios. */
 const [loadError, setLoadError] = useState(false);
   /** Progreso real por alumno, agrupado por curso dinamico. */
-  const [progressByStudent, setProgressByStudent] = useState<Map<string, CourseProgressSummary[]>>(new Map());
+  const [progressByStudent, setProgressByStudent] = useState<Map<string, ProgressByCourseResult>>(new Map());
 
   /** Ejecuta la carga de usuarios al montar el componente. */
 useEffect(() => {
@@ -33,15 +33,15 @@ useEffect(() => {
     Promise.all(
       studentIds.map((id) =>
         fetchStudentProgressByCourse(token, id)
-          .then((result): [string, CourseProgressSummary[]] => [id, result.progress])
-          .catch((): [string, CourseProgressSummary[]] => [id, []]),
+          .then((result): [string, ProgressByCourseResult] | null => [id, result])
+          .catch((): null => null),
       ),
-    ).then((entries) => setProgressByStudent(new Map(entries)));
+    ).then((entries) => setProgressByStudent(new Map(entries.filter((e): e is [string, ProgressByCourseResult] => e !== null))));
   }, [users]);
 
   /** Calcula la lista de estudiantes a partir de los usuarios cargados, memoizando el resultado. */
 const students = useMemo(
-    () => (users ?? []).filter((u) => u.role === 'student').map((u) => buildStudentProgressRecord(u, undefined, progressByStudent.get(u.id) ?? [])),
+    () => (users ?? []).filter((u) => u.role === 'student').map((u) => buildStudentProgressRecord(u, undefined, progressByStudent.get(u.id))),
     [users, progressByStudent]
   );
 

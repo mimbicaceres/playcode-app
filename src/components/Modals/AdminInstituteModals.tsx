@@ -1,3 +1,6 @@
+import { CoursePresentationFields, CoursePresentation, EMPTY_PRESENTATION, presentationToPayload } from '../CoursePresentationFields';
+import { CreateCourseInput } from '../../auth/api';
+import { LANGUAGE_CHOICES } from '../../lib/exerciseAuthoring';
 import React, { useEffect, useState } from 'react';
 import { AdminInstituteCourseRow, AdminInstituteUserRow } from '../../types';
 import type { AdminCourseContent, AdminExercise, ExerciseFormInput, UserEditData } from '../../auth/api';
@@ -12,16 +15,16 @@ const INPUT_CLASSES =
   'w-full h-10 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#2563eb] transition-colors';
 const ROLE_LABELS = { student: 'Alumno', teacher: 'Docente', admin: 'Administrador' } as const;
 
-const ModalShell: React.FC<{ title: string; subtitle?: string; onClose: () => void; children: React.ReactNode; wide?: boolean }> = ({
-  title, subtitle, onClose, children, wide,
+const ModalShell: React.FC<{ title: string; subtitle?: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xwide?: boolean }> = ({
+  title, subtitle, onClose, children, wide, xwide,
 }) => (
   <div
-    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-fade-in"
+    className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-fade-in"
     role="dialog"
     aria-modal="true"
     aria-label={title}
   >
-    <div className={`bg-white w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-slate-200 p-6 animate-scale-up`}>
+    <div className={`bg-white w-full ${xwide ? 'max-w-2xl' : wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] rounded-3xl shadow-2xl flex flex-col border border-slate-200 p-6 animate-scale-up`}>
       <div className="flex justify-between items-start gap-3 mb-4">
         <div>
           <h3 className="font-heading font-bold text-xl text-[#0b1c30]">{title}</h3>
@@ -416,30 +419,74 @@ export const CourseAssignModal: React.FC<{
   );
 };
 
-// ─── Crear curso (Fase B: contenido dinamico) ───────────────────────────────
+// ─── Crear curso ────────────────────────────────────────────────────────────
+// Asistente de creacion: titulo, lenguaje, como empezar (vacio, con unidades ya escritas o copiando
+// otro curso) y opciones de presentacion. Al crearlo se abre el creador de cursos para cargar el contenido.
+type StartMode = 'empty' | 'units' | 'copy';
+
 export const CreateCourseModal: React.FC<{
-  onSave: (data: { title: string; description?: string }) => SaveResult;
+  /** Cursos reales existentes, para poder copiar uno. */
+  existingCourses: { id: string; name: string; language?: string }[];
+  onCreate: (data: CreateCourseInput) => Promise<{ error: string | null; courseId?: string }>;
+  onCreated: (courseId: string) => void;
   onClose: () => void;
-}> = ({ onSave, onClose }) => {
+}> = ({ existingCourses, onCreate, onCreated, onClose }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const { busy, error, setError, run } = useSave(onClose);
+  const [language, setLanguage] = useState('python');
+  const [startMode, setStartMode] = useState<StartMode>('units');
+  const [unitsText, setUnitsText] = useState('');
+  const [copyFrom, setCopyFrom] = useState('');
+  const [presentation, setPresentation] = useState<CoursePresentation>(EMPTY_PRESENTATION);
+  const [showMore, setShowMore] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const unitTitles = unitsText.split('\n').map((t) => t.trim()).filter(Boolean);
+  const copySource = existingCourses.find((c) => c.id === copyFrom);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('El título es obligatorio.');
       return;
     }
-    run(() => onSave({ title: title.trim(), description: description.trim() || undefined }));
+    if (startMode === 'copy' && !copyFrom) {
+      setError('Elegí el curso que querés copiar.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const result = await onCreate({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      // Al copiar, el curso hereda el lenguaje y la presentacion del original (salvo lo que se complete a mano).
+      ...(startMode === 'copy' ? {} : { language }),
+      ...(startMode === 'units' && unitTitles.length > 0 ? { unitTitles } : {}),
+      ...(startMode === 'copy' ? { duplicateFromCourseId: copyFrom } : {}),
+      ...Object.fromEntries(Object.entries(presentationToPayload(presentation)).filter(([, v]) => v !== null)),
+    });
+    setBusy(false);
+    if (result.error || !result.courseId) {
+      setError(result.error ?? 'No se pudo crear el curso.');
+      return;
+    }
+    onClose();
+    onCreated(result.courseId);
   };
 
+  const START_OPTIONS: { id: StartMode; icon: string; label: string; detail: string }[] = [
+    { id: 'units', icon: 'list_alt', label: 'Con unidades', detail: 'Escribís los temas y se crean las unidades.' },
+    { id: 'empty', icon: 'draft', label: 'Vacío', detail: 'Lo armás todo después, paso a paso.' },
+    { id: 'copy', icon: 'content_copy', label: 'Copiar un curso', detail: 'Parte de uno que ya existe.' },
+  ];
+
   return (
-    <ModalShell title="Crear curso" subtitle="Después vas a poder agregar unidades y ejercicios" onClose={onClose}>
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
+    <ModalShell title="Crear curso" subtitle="Elegí cómo empezar; después vas a cargar unidades y ejercicios" onClose={onClose} xwide>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-[#434655]" htmlFor="course-title">Título</label>
-          <input id="course-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLASSES} />
+          <input id="course-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej.: Java para principiantes" className={INPUT_CLASSES} autoFocus />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-[#434655]" htmlFor="course-description">Descripción (opcional)</label>
@@ -447,288 +494,110 @@ export const CreateCourseModal: React.FC<{
             id="course-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={3}
+            rows={2}
+            placeholder="Lo que va a leer el alumno en la tarjeta del curso"
             className={`${INPUT_CLASSES} h-auto py-2`}
           />
         </div>
-        <ErrorBox message={error} />
-        <Footer onCancel={onClose} submitLabel="Crear curso" busyLabel="Creando..." busy={busy} />
-      </form>
-    </ModalShell>
-  );
-};
 
-// ─── Crear / editar ejercicio ───────────────────────────────────────────────
-interface ExerciseTestCaseForm {
-  input: string;
-  expectedOutput: string;
-  isHidden: boolean;
-}
-
-const emptyTestCase = (): ExerciseTestCaseForm => ({ input: '', expectedOutput: '', isHidden: false });
-
-export const ExerciseFormModal: React.FC<{
-  exercise?: AdminExercise;
-  onSave: (data: ExerciseFormInput) => SaveResult;
-  onClose: () => void;
-}> = ({ exercise, onSave, onClose }) => {
-  const [title, setTitle] = useState(exercise?.title ?? '');
-  const [prompt, setPrompt] = useState(exercise?.prompt ?? '');
-  const [starterCode, setStarterCode] = useState(exercise?.starterCode ?? '');
-  const [rewardXp, setRewardXp] = useState(exercise?.rewardXp ?? 10);
-  const [hint, setHint] = useState(exercise?.hint ?? '');
-  const [testCases, setTestCases] = useState<ExerciseTestCaseForm[]>(
-    exercise && exercise.testCases.length
-      ? exercise.testCases.map((tc) => ({ input: tc.input ?? '', expectedOutput: tc.expectedOutput, isHidden: tc.isHidden }))
-      : [emptyTestCase()],
-  );
-  const { busy, error, setError, run } = useSave(onClose);
-
-  const updateTestCase = (index: number, patch: Partial<ExerciseTestCaseForm>) =>
-    setTestCases((prev) => prev.map((tc, i) => (i === index ? { ...tc, ...patch } : tc)));
-  const addTestCase = () => setTestCases((prev) => [...prev, emptyTestCase()]);
-  const removeTestCase = (index: number) => setTestCases((prev) => prev.filter((_, i) => i !== index));
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !prompt.trim()) {
-      setError('Completá el título y la consigna.');
-      return;
-    }
-    if (testCases.length === 0 || testCases.some((tc) => !tc.expectedOutput.trim())) {
-      setError('Agregá al menos un caso de prueba con salida esperada.');
-      return;
-    }
-    run(() => onSave({
-      title: title.trim(),
-      prompt: prompt.trim(),
-      starterCode,
-      rewardXp,
-      hint: hint.trim() || undefined,
-      testCases: testCases.map((tc) => ({ input: tc.input, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden })),
-    }));
-  };
-
-  return (
-    <ModalShell title={exercise ? 'Editar ejercicio' : 'Nuevo ejercicio'} subtitle="Ejercicio de código (Python)" onClose={onClose} wide>
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
+        {/* Como empezar */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-title">Título</label>
-          <input id="ex-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLASSES} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-prompt">Consigna</label>
-          <textarea id="ex-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className={`${INPUT_CLASSES} h-auto py-2`} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-starter">Código inicial</label>
-          <textarea
-            id="ex-starter"
-            value={starterCode}
-            onChange={(e) => setStarterCode(e.target.value)}
-            rows={4}
-            className={`${INPUT_CLASSES} h-auto py-2 font-mono`}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-xp">XP</label>
-            <input
-              id="ex-xp"
-              type="number"
-              min={0}
-              value={rewardXp}
-              onChange={(e) => setRewardXp(Number(e.target.value))}
-              className={INPUT_CLASSES}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434655]" htmlFor="ex-hint">Pista (opcional)</label>
-            <input id="ex-hint" type="text" value={hint} onChange={(e) => setHint(e.target.value)} className={INPUT_CLASSES} />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-semibold text-[#434655]">Casos de prueba</span>
-            <button
-              type="button"
-              onClick={addTestCase}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">add</span> Agregar caso
-            </button>
-          </div>
-          {testCases.map((tc, index) => (
-            <div key={index} className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-500">Entrada (input, opcional)</label>
-                  <textarea
-                    value={tc.input}
-                    onChange={(e) => updateTestCase(index, { input: e.target.value })}
-                    rows={2}
-                    className={`${INPUT_CLASSES} h-auto py-1.5 font-mono text-xs`}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-semibold text-slate-500">Salida esperada</label>
-                  <textarea
-                    value={tc.expectedOutput}
-                    onChange={(e) => updateTestCase(index, { expectedOutput: e.target.value })}
-                    rows={2}
-                    className={`${INPUT_CLASSES} h-auto py-1.5 font-mono text-xs`}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={tc.isHidden}
-                    onChange={(e) => updateTestCase(index, { isHidden: e.target.checked })}
-                    className="w-4 h-4 accent-blue-600 cursor-pointer"
-                  />
-                  Oculto (no se muestra como ejemplo al alumno)
-                </label>
-                {testCases.length > 1 && (
-                  <button type="button" onClick={() => removeTestCase(index)} className="text-xs text-red-600 hover:text-red-700 cursor-pointer">
-                    Quitar
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <ErrorBox message={error} />
-        <Footer onCancel={onClose} submitLabel={exercise ? 'Guardar cambios' : 'Crear ejercicio'} busyLabel="Guardando..." busy={busy} />
-      </form>
-    </ModalShell>
-  );
-};
-
-// ─── Gestionar contenido de un curso dinámico (unidades + ejercicios) ───────
-export const ManageCourseContentModal: React.FC<{
-  courseId: string;
-  courseName: string;
-  fetchContent: (courseId: string) => Promise<AdminCourseContent>;
-  onCreateUnit: (courseId: string, title: string) => SaveResult;
-  onCreateExercise: (unitId: string, data: ExerciseFormInput) => SaveResult;
-  onUpdateExercise: (exerciseId: string, data: ExerciseFormInput) => SaveResult;
-  onDeleteExercise: (exerciseId: string) => SaveResult;
-  onClose: () => void;
-}> = ({ courseId, courseName, fetchContent, onCreateUnit, onCreateExercise, onUpdateExercise, onDeleteExercise, onClose }) => {
-  const [content, setContent] = useState<AdminCourseContent | null>(null);
-  const [loadError, setLoadError] = useState(false);
-  const [newUnitTitle, setNewUnitTitle] = useState('');
-  const [addingUnit, setAddingUnit] = useState(false);
-  const [exerciseModal, setExerciseModal] = useState<{ unitId: string; exercise?: AdminExercise } | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const reload = () => {
-    fetchContent(courseId)
-      .then((c) => { setContent(c); setLoadError(false); })
-      .catch(() => setLoadError(true));
-  };
-  useEffect(reload, [courseId]);
-
-  const handleAddUnit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUnitTitle.trim()) return;
-    setAddingUnit(true);
-    const error = await onCreateUnit(courseId, newUnitTitle.trim());
-    setAddingUnit(false);
-    if (error) {
-      setActionError(error);
-      return;
-    }
-    setNewUnitTitle('');
-    reload();
-  };
-
-  const handleDeleteExercise = async (exerciseId: string) => {
-    if (!window.confirm('¿Eliminar este ejercicio? Esta acción no se puede deshacer.')) return;
-    const error = await onDeleteExercise(exerciseId);
-    if (error) setActionError(error);
-    else reload();
-  };
-
-  return (
-    <ModalShell title={courseName} subtitle="Unidades y ejercicios de este curso" onClose={onClose} wide>
-      <div className="flex flex-col gap-4">
-        <ErrorBox message={actionError} />
-        {!content && !loadError && <p className="text-sm text-slate-500 py-6 text-center">Cargando...</p>}
-        {loadError && <ErrorBox message="No se pudo cargar el contenido del curso." />}
-        {content && content.units.length === 0 && (
-          <p className="text-xs text-slate-400 text-center py-4">Todavía no tiene unidades. Agregá la primera abajo.</p>
-        )}
-        {content && content.units.map((unit) => (
-          <section key={unit.id} className="border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <h4 className="font-semibold text-sm text-[#0b1c30]">{unit.title}</h4>
+          <span className="text-xs font-semibold text-[#434655]">¿Cómo querés empezar?</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {START_OPTIONS.map((o) => (
               <button
+                key={o.id}
                 type="button"
-                onClick={() => setExerciseModal({ unitId: unit.id })}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                onClick={() => setStartMode(o.id)}
+                aria-pressed={startMode === o.id}
+                className={`text-left p-3 rounded-xl border-2 transition-colors cursor-pointer flex gap-2.5 ${startMode === o.id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
               >
-                <span className="material-symbols-outlined text-sm">add</span> Agregar ejercicio
+                <span className={`material-symbols-outlined text-2xl ${startMode === o.id ? 'text-blue-600' : 'text-slate-400'}`}>{o.icon}</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-[#0b1c30]">{o.label}</span>
+                  <span className="block text-[11px] text-slate-500 leading-snug">{o.detail}</span>
+                </span>
               </button>
-            </div>
-            {unit.exercises.length === 0 ? (
-              <p className="text-xs text-slate-400">Todavía no tiene ejercicios.</p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {unit.exercises.map((ex) => (
-                  <li key={ex.id} className="flex justify-between items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="text-sm text-[#0b1c30] truncate">{ex.title}</span>
-                    <span className="flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] text-slate-500 whitespace-nowrap">{ex.testCases.length} casos · {ex.rewardXp} XP</span>
-                      <SmallAction icon="edit" title="Editar" onClick={() => setExerciseModal({ unitId: unit.id, exercise: ex })} />
-                      <SmallAction icon="delete" title="Eliminar" danger onClick={() => handleDeleteExercise(ex.id)} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        ))}
-
-        <form onSubmit={handleAddUnit} className="flex gap-2 items-end pt-2 border-t border-slate-100">
-          <div className="flex-1 flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434655]" htmlFor="new-unit-title">Nueva unidad</label>
-            <input
-              id="new-unit-title"
-              type="text"
-              value={newUnitTitle}
-              onChange={(e) => setNewUnitTitle(e.target.value)}
-              placeholder="Título de la unidad"
-              className={INPUT_CLASSES}
-            />
+            ))}
           </div>
-          <button
-            type="submit"
-            disabled={addingUnit || !newUnitTitle.trim()}
-            className="btn-game-primary px-4 py-2.5 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {addingUnit ? 'Agregando...' : 'Agregar unidad'}
-          </button>
-        </form>
-      </div>
+        </div>
 
-      {exerciseModal && (
-        <ExerciseFormModal
-          exercise={exerciseModal.exercise}
-          onClose={() => setExerciseModal(null)}
-          onSave={(data) => (exerciseModal.exercise
-            ? onUpdateExercise(exerciseModal.exercise.id, data)
-            : onCreateExercise(exerciseModal.unitId, data)
-          ).then((saveError) => {
-            if (!saveError) reload();
-            return saveError;
-          })}
-        />
-      )}
+        {startMode === 'units' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#434655]" htmlFor="course-units">Unidades (una por línea)</label>
+            <textarea
+              id="course-units"
+              value={unitsText}
+              onChange={(e) => setUnitsText(e.target.value)}
+              rows={4}
+              placeholder={'Variables y tipos\nCondicionales\nBucles\nFunciones'}
+              className={`${INPUT_CLASSES} h-auto py-2`}
+            />
+            <span className="text-[11px] text-slate-500">{unitTitles.length > 0 ? `Se van a crear ${unitTitles.length} ${unitTitles.length === 1 ? 'unidad' : 'unidades'}.` : 'Podés dejarlo vacío y agregarlas después.'}</span>
+          </div>
+        )}
+
+        {startMode === 'copy' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-[#434655]" htmlFor="course-copy">Curso a copiar</label>
+            <select id="course-copy" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} className={`${INPUT_CLASSES} cursor-pointer`}>
+              <option value="">Elegí un curso…</option>
+              {existingCourses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <span className="text-[11px] text-slate-500">
+              Se copian sus unidades, ejercicios y casos de prueba{copySource ? `, y el curso mantiene el lenguaje de "${copySource.name}"` : ''}. Después podés cambiar lo que quieras sin tocar el original.
+            </span>
+          </div>
+        )}
+
+        {/* Lenguaje */}
+        {startMode !== 'copy' && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-[#434655]">Tipo de curso</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {LANGUAGE_CHOICES.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setLanguage(l.id)}
+                  aria-pressed={language === l.id}
+                  className={`text-left p-3 rounded-xl border-2 transition-colors cursor-pointer flex gap-2.5 ${language === l.id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                >
+                  <span className={`material-symbols-outlined text-2xl ${language === l.id ? 'text-blue-600' : 'text-slate-400'}`}>{l.icon}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-[#0b1c30]">{l.label}</span>
+                    <span className="block text-[11px] text-slate-500 leading-snug">{l.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Mas opciones */}
+        <div className="border border-slate-200 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => setShowMore((v) => !v)}
+            aria-expanded={showMore}
+            className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer"
+          >
+            <span>
+              <span className="block text-sm font-bold text-[#0b1c30]">Más opciones</span>
+              <span className="block text-[11px] text-slate-500">Categoría, nivel, duración, ícono y color</span>
+            </span>
+            <span className="material-symbols-outlined text-slate-400">{showMore ? 'expand_less' : 'expand_more'}</span>
+          </button>
+          {showMore && (
+            <div className="px-4 pb-4">
+              <CoursePresentationFields value={presentation} onChange={setPresentation} language={language} />
+            </div>
+          )}
+        </div>
+
+        <ErrorBox message={error} />
+        <Footer onCancel={onClose} submitLabel="Crear y cargar contenido" busyLabel="Creando..." busy={busy} />
+      </form>
     </ModalShell>
   );
 };

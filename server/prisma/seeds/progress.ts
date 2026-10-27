@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
+import { seedAttempts } from "./attempts";
 
 // Deja a UN alumno con un avance gradual y realista en los cursos indicados:
 // los primeros N ejercicios de cada curso (en orden, como se desbloquean)
@@ -41,10 +42,13 @@ export async function applyGradualProgress(email: string, specs: string[]) {
     if (completedCount + (failedOnNext ? 1 : 0) > exercises.length) throw new Error(`${slug}: el curso tiene ${exercises.length} ejercicios`);
 
     await prisma.exerciseProgress.deleteMany({ where: { userId: user.id, courseId: course.id } });
+    // El historial de intentos de ese curso se regenera a partir del nuevo progreso.
+    await prisma.exerciseAttempt.deleteMany({ where: { userId: user.id, courseId: course.id } });
 
     const startedDaysAgo = START_DAYS_AGO[courseIndex % START_DAYS_AGO.length];
     const rows: Prisma.ExerciseProgressCreateManyInput[] = exercises.slice(0, completedCount).map((exercise, i) => {
-      const h = hash(`${email}:${exercise.id}`);
+      // slug (no id): el id es un UUID distinto en cada base y el avance tiene que ser igual para todos.
+      const h = hash(`${email}:${exercise.slug ?? exercise.id}`);
       // Avance repartido entre el dia de inicio y hoy; los ultimos quedan cerca de "ahora".
       const progress = completedCount > 1 ? i / (completedCount - 1) : 1;
       const hoursAgo = Math.max(2, Math.round((1 - progress) * startedDaysAgo * 24) - (h % 9));
@@ -89,4 +93,5 @@ export async function applyGradualProgress(email: string, specs: string[]) {
     data: { totalXp, streakDays: 5, lastActivityAt: new Date(lastActivity) },
   });
   console.log(`${email}: ${totalXp} XP, racha 5, ultima actividad ${new Date(lastActivity).toISOString()}`);
+  await seedAttempts([user.id]);
 }

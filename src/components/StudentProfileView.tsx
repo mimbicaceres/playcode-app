@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { AchievementBadge, Course, ScreenView, UserProfile } from '../types';
 import { DEMO_STUDENT_HOME, MASCOT_IMAGES } from '../data/mockData';
 import { EditAvatarModal } from './Modals/EditAvatarModal';
+import { Gamification } from '../auth/api';
 
 interface StudentProfileViewProps {
   user: UserProfile;
   badges: AchievementBadge[];
+  // Real students: nivel y progreso de XP (gamificacion). Sin esto (demo) no se muestra el nivel.
+  gamification?: Gamification | null;
   // Nombre, apellido, escuela y año son de solo lectura para el alumno (los
   // cambia el admin); lo único que el alumno puede actualizar es su foto.
   onUpdateAvatar: (avatarDataUrl: string) => Promise<string | null>;
@@ -24,6 +27,10 @@ interface CourseCardModel {
   icon: React.ReactNode;
   onClick: () => void;
 }
+
+/** Fecha de un logro: los reales vienen como ISO; los de la demo ya son texto ("Ayer"). */
+const formatBadgeDate = (value: string) =>
+  /^\d{4}-\d{2}-\d{2}T/.test(value) ? new Date(value).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) : value;
 
 /** Tarjeta pequeña de estadística (racha, experiencia, progreso). */
 const StatCard: React.FC<{
@@ -117,8 +124,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
   onUpdateAvatar,
   onNavigate,
   courses,
-  onOpenCourse
-}) => {
+  onOpenCourse, gamification }) => {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const isDemo = !courses;
   const unlockedBadges = badges.filter((badge) => badge.unlocked).length;
@@ -214,7 +220,11 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             icon={<span className="material-symbols-outlined text-amber-500 text-2xl fill">stars</span>}
             label="Experiencia"
             value={`${user.totalXp.toLocaleString()} XP`}
-            note={user.totalXp > 0 ? 'Seguí así' : 'Ganá tu primer XP'}
+            note={
+              gamification
+                ? `Nivel ${gamification.level} · ${gamification.xpToNextLevel} XP al siguiente`
+                : user.totalXp > 0 ? 'Seguí así' : 'Ganá tu primer XP'
+            }
           />
           <StatCard
             className="bg-emerald-50 border-emerald-100"
@@ -228,7 +238,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
 
       {/* Row 2: badges (los datos personales ya no se muestran/editan aca:
           nombre/escuela/año son de solo lectura, solo el admin los cambia). */}
-      <div className="grid grid-cols-1 gap-4 items-stretch lg:flex-1 lg:max-h-[280px]">
+      <div className="grid grid-cols-1 gap-4 items-stretch">
         <div className="flex">
           <Panel
             icon="military_tech"
@@ -236,7 +246,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
             title="Insignias & Logros"
           >
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-start justify-items-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 items-start justify-items-center">
                 {badges.map((badge) => (
                   <div key={badge.id} className="flex flex-col items-center text-center gap-1.5 group">
                     <div
@@ -245,7 +255,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                           ? 'bg-gradient-to-br from-[#fff7ed] via-[#ffedd5] to-[#fde68a] border-3 border-[#ffb95f] shadow-[0_4px_14px_rgba(255,185,95,0.45)] group-hover:scale-105'
                           : 'bg-slate-100 border-2 border-dashed border-slate-300 opacity-55'
                       }`}
-                      title={badge.unlocked ? `Desbloqueado: ${badge.title}` : `Bloqueado: ${badge.title}`}
+                      title={badge.description ?? (badge.unlocked ? `Desbloqueado: ${badge.title}` : `Bloqueado: ${badge.title}`)}
                     >
                       <span
                         className={`material-symbols-outlined text-2xl ${badge.unlocked ? 'fill text-amber-600' : 'text-slate-400'}`}
@@ -256,7 +266,9 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
                     <div>
                       <h3 className="font-heading font-bold text-xs text-[#0b1c30]">{badge.title}</h3>
                       <p className="text-[10px] font-semibold" style={{ color: badge.unlocked ? '#b45309' : '#94a3b8' }}>
-                        {badge.unlocked ? (badge.unlockedAt ? `Obtenida: ${badge.unlockedAt}` : 'Completado') : 'Bloqueado'}
+                        {badge.unlocked
+                          ? (badge.unlockedAt ? `Obtenida: ${formatBadgeDate(badge.unlockedAt)}` : 'Completado')
+                          : badge.target ? `Bloqueado · ${badge.current ?? 0}/${badge.target}` : 'Bloqueado'}
                       </p>
                     </div>
                   </div>
@@ -302,7 +314,7 @@ export const StudentProfileView: React.FC<StudentProfileViewProps> = ({
               <span className="material-symbols-outlined text-2xl">explore</span>
             </div>
             <h3 className="font-heading font-bold text-sm text-[#0b1c30]">Explorar catálogo completo</h3>
-            <p className="text-xs text-[#737686]">Revisá los cursos de Python, JavaScript, Java y más.</p>
+            <p className="text-xs text-[#737686]">Revisá los cursos de Python, JavaScript, SQL, HTML y CSS.</p>
           </button>
         </div>
       </div>

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScreenView, Course, Unit, Exercise } from '../types';
 import { MASCOT_IMAGES } from '../data/mockData';
 import { ErrorFeedbackModal } from './Modals/ErrorFeedbackModal';
 import { SuccessFeedbackModal } from './Modals/SuccessFeedbackModal';
 import { HintModal } from './Modals/HintModal';
-import { ApiError, getStoredToken, submitCodeExercise, GradedTestCaseResult } from '../auth/api';
+import { ApiError, getStoredToken, submitCodeExercise, GradedTestCaseResult, SubmitCodeExerciseResponse } from '../auth/api';
 import { runExercise } from '../lib/codeRunner';
 import { languageInfo } from '../lib/languages';
 
@@ -83,6 +83,7 @@ function describeMismatch(mode: string | undefined, actual: string, expected: st
 
 function buildErrorMessage(exercise: Exercise, results: GradedTestCaseResult[]): string {
   const hintSuffix = exercise.hint ? ` Pista: ${exercise.hint}` : '';
+  if (exercise.codeLanguage === 'quiz') return `Esa no es la respuesta correcta. Pensalo de nuevo y probá con otra opción.${hintSuffix}`;
   const failedVisible = results.find((r) => !r.passed && !r.isHidden);
   if (failedVisible) {
     const testCase = exercise.testCases?.find((t) => t.id === failedVisible.testCaseId);
@@ -121,8 +122,37 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
   const [showHintModal, setShowHintModal] = useState(false);
   const [infraErrorMessage, setInfraErrorMessage] = useState<string | null>(null);
   const [lastResults, setLastResults] = useState<GradedTestCaseResult[] | null>(null);
+  // Gamificacion del ultimo envio correcto (racha, nivel, logros) para celebrarlo.
+  const [celebration, setCelebration] = useState<SubmitCodeExerciseResponse | null>(null);
+  // Lo que el ejercicio ya estaba resuelto al abrirlo (repasar no suma XP).
+  const solvedBefore = useRef(exercise.status === 'completed');
+
+  // Tiempo activo en el ejercicio: se cuenta desde que se abre (o desde el ultimo
+  // envio) y se pausa mientras la pestaña esta oculta. Se informa al enviar.
+  const activeSince = useRef(Date.now());
+  const hiddenAt = useRef<number | null>(null);
+  useEffect(() => {
+    activeSince.current = Date.now();
+    solvedBefore.current = exercise.status === 'completed';
+  }, [exercise.id]);
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) {
+        hiddenAt.current = Date.now();
+      } else if (hiddenAt.current !== null) {
+        activeSince.current += Date.now() - hiddenAt.current;
+        hiddenAt.current = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   const lang = languageInfo(exercise.codeLanguage);
+  // Opcion multiple: las opciones vienen en el spec del caso; el alumno elige una y se envia su indice.
+  const isQuiz = exercise.codeLanguage === 'quiz';
+  const quizOptions = ((exercise.testCases?.[0]?.spec as { options?: string[] } | undefined)?.options) ?? [];
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const exerciseIndex = unit.exercises.findIndex((e) => e.id === exercise.id);
 
   const handleReset = () => setCode(exercise.starterCode ?? '');
@@ -130,22 +160,28 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
   const handleRun = async () => {
     const token = getStoredToken();
     if (!token) return;
+    if (isQuiz && selectedOption === null) return;
+    // En opcion multiple lo que se "ejecuta" y se envia es el indice de la opcion elegida.
+    const submittedCode = isQuiz ? String(selectedOption) : code;
     setRunning(true);
     setInfraErrorMessage(null);
     try {
       const testCases = exercise.testCases ?? [];
       const { outputs, infraError } = await runExercise(
         exercise.codeLanguage,
-        code,
+        submittedCode,
         testCases.map((testCase) => ({ id: testCase.id, input: testCase.input ?? '', spec: testCase.spec })),
       );
 
+      const timeSpentSec = Math.round((Date.now() - activeSince.current) / 1000);
       const result = infraError
-        ? await submitCodeExercise(token, exercise.id, code, { infraError })
-        : await submitCodeExercise(token, exercise.id, code, { outputs });
+        ? await submitCodeExercise(token, exercise.id, submittedCode, { infraError })
+        : await submitCodeExercise(token, exercise.id, submittedCode, { outputs }, timeSpentSec);
+      activeSince.current = Date.now();
 
       setLastResults(result.results);
       if (result.success) {
+        setCelebration(result);
         setShowSuccessModal(true);
         onExerciseCompleted?.();
       } else {
@@ -219,6 +255,51 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
           </div>
         </div>
 
+        {isQuiz ? (
+          <div className="w-full flex flex-col gap-2.5">
+            <div className="flex justify-between items-center px-2">
+              <span className="text-xs font-semibold text-[#434655] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#2563eb]">quiz</span>
+                Elegí la respuesta correcta
+              </span>
+              <button
+                onClick={() => setShowHintModal(true)}
+                className="text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm text-amber-600">lightbulb</span>
+                Pista
+              </button>
+            </div>
+            <div role="radiogroup" aria-label="Opciones de respuesta" className="flex flex-col gap-2">
+              {quizOptions.map((option, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedOption === i}
+                  onClick={() => setSelectedOption(i)}
+                  className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all cursor-pointer ${
+                    selectedOption === i
+                      ? 'border-[#2563eb] bg-blue-50 shadow-sm'
+                      : 'border-[#e2e8f0] bg-white hover:border-blue-300'
+                  }`}
+                >
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${selectedOption === i ? 'bg-[#2563eb] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="text-sm md:text-[15px] text-[#0b1c30] leading-snug">{option}</span>
+                </button>
+              ))}
+              {quizOptions.length === 0 && <p className="text-sm text-slate-500">Este ejercicio todavía no tiene opciones cargadas.</p>}
+            </div>
+            {infraErrorMessage && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                <span className="material-symbols-outlined text-base">wifi_off</span>
+                <span>{infraErrorMessage}</span>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="w-full flex flex-col gap-1.5">
           <div className="flex justify-between items-center px-2">
             <span className="text-xs font-semibold text-[#434655] flex items-center gap-1.5 font-mono">
@@ -300,15 +381,16 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
             </div>
           )}
         </div>
+        )}
 
         <div className="w-full">
           <button
             onClick={handleRun}
-            disabled={running}
+            disabled={running || (isQuiz && selectedOption === null)}
             className="btn-game-amber w-full py-2.5 text-sm flex justify-center items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-xl fill">{running ? 'hourglass_top' : 'play_arrow'}</span>
-            <span>{running ? 'Verificando…' : 'Ejecutar y Verificar Código'}</span>
+            <span>{running ? 'Verificando…' : isQuiz ? 'Verificar respuesta' : 'Ejecutar y Verificar Código'}</span>
           </button>
         </div>
       </main>
@@ -343,7 +425,11 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         onNextExercise={handleContinue}
-        rewardXp={exercise.rewardXp}
+        rewardXp={celebration && celebration.xpEarned > 0 ? celebration.xpEarned : exercise.rewardXp}
+        bonusXp={celebration?.bonusXp}
+        streakDays={celebration?.streakDays}
+        gamification={celebration?.gamification}
+        alreadySolved={solvedBefore.current}
       />
 
       <HintModal

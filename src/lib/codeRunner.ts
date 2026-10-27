@@ -5,6 +5,7 @@ import { RunSubmissionResult, RunnerTestCase, runTestCases as runPython } from '
 import { runJsTestCases } from './jsRunner';
 import { runSqlTestCases } from './sqlRunner';
 import { runHtmlTestCases } from './htmlRunner';
+import { runQuizTestCases } from './quizRunner';
 
 export type { RunnerTestCase, RunSubmissionResult };
 
@@ -16,6 +17,7 @@ const RUNNERS: Record<string, Runner> = {
   javascript: runJsTestCases,
   sql: runSqlTestCases,
   html: runHtmlTestCases,
+  quiz: runQuizTestCases,
 };
 
 export function runExercise(language: string, code: string, testCases: RunnerTestCase[]): Promise<RunSubmissionResult> {

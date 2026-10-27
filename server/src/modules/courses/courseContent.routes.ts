@@ -5,9 +5,9 @@ import { getCourseContent } from './courseContent.service';
 
 const router = Router();
 
-// Listado de cursos reales (dinamicos) para el panel de admin: solo los que
-// ya tienen contenido real cargado (unidades con ejercicios), para no
-// mezclar con las filas "cascaron" de los cursos viejos del catalogo CODIX.
+// Listado de cursos para el panel de admin y el de docente. Incluye TODOS los cursos, tambien
+// los recien creados que todavia no tienen unidades ni ejercicios: si no, un curso nuevo
+// desapareceria de la lista y no habria forma de entrar a cargarle contenido.
 router.get('/', requireAuth, requireRole('admin', 'teacher'), async (_req: Request, res: Response) => {
   try {
     const courses = await prisma.course.findMany({
@@ -16,23 +16,30 @@ router.get('/', requireAuth, requireRole('admin', 'teacher'), async (_req: Reque
           orderBy: { order: 'asc' },
           include: { exercises: { select: { id: true, title: true }, orderBy: { order: 'asc' } } },
         },
+        _count: { select: { assignments: true } },
       },
+      orderBy: { title: 'asc' },
     });
 
-    const result = courses
-      .filter((course) => course.units.some((unit) => unit.exercises.length > 0))
-      .map((course) => ({
-        id: course.id,
-        title: course.title,
-        description: course.description,
-        unitsCount: course.units.length,
-        activitiesCount: course.units.reduce((sum, unit) => sum + unit.exercises.length, 0),
-        units: course.units.map((unit) => ({
-          title: unit.title ?? '',
-          activities: unit.exercises.length,
-          exercises: unit.exercises.map((exercise) => ({ id: exercise.id, title: exercise.title ?? '' })),
-        })),
-      }));
+    const result = courses.map((course) => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      language: course.language,
+      category: course.category,
+      level: course.level,
+      estimatedHours: course.estimatedHours,
+      iconName: course.iconName,
+      color: course.color,
+      assignmentsCount: course._count.assignments,
+      unitsCount: course.units.length,
+      activitiesCount: course.units.reduce((sum, unit) => sum + unit.exercises.length, 0),
+      units: course.units.map((unit) => ({
+        title: unit.title ?? '',
+        activities: unit.exercises.length,
+        exercises: unit.exercises.map((exercise) => ({ id: exercise.id, title: exercise.title ?? '' })),
+      })),
+    }));
 
     return res.status(200).json({ courses: result });
   } catch (error) {

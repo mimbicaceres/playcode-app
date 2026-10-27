@@ -247,8 +247,8 @@ export async function seedInstitute() {
 // inicial en Python que tiene en la base original. No pisa nada: solo agrega
 // lo que falta (asignaciones nuevas) y solo da progreso a quien no tiene ninguno.
 const DEV_COURSES: Record<string, string[]> = {
-  "estudiante@ejemplo.com": ["python-fundamentos", "prog1"],
-  "docente@ejemplo.com": ["prog1", "python-fundamentos", "sql-consultas"],
+  "estudiante@ejemplo.com": ["python-fundamentos"],
+  "docente@ejemplo.com": ["python-fundamentos", "sql-consultas"],
 };
 // Ejercicios de Python que ya tenia resueltos estudiante@ (intentos, y hace cuantos
 // dias): 5 de hace dos semanas y 3 de hoy.

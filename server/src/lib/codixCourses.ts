@@ -1,20 +1,16 @@
 import { prisma } from "./prisma";
 
-// Ids of the courses of the CODIX catalog. Courses, units and activities are
-// predefined by CODIX (their content lives in the frontend catalog); the backend
-// only stores which courses an admin assigned to each student or teacher.
-export const CODIX_COURSE_IDS = ["prog1", "py2", "java3", "js_base", "css_modern"] as const;
+// Los cursos del catalogo fijo de CODIX (prog1, py2, java3, js_base, css_modern)
+// se dieron de baja: todos los cursos son ahora cursos reales de la base de datos
+// (Course.id). La lista queda vacia y `isCodixCourseId` siempre da false.
+export const CODIX_COURSE_IDS: readonly string[] = [];
 
 export function isCodixCourseId(id: unknown): id is string {
-  return typeof id === "string" && (CODIX_COURSE_IDS as readonly string[]).includes(id);
+  return typeof id === "string" && CODIX_COURSE_IDS.includes(id);
 }
 
-// Acepta tanto los cursos fijos del catalogo CODIX como cursos reales
-// cargados en la base de datos (Course.id). Usar esta funcion para validar
-// asignaciones nuevas en lugar de isCodixCourseId, que solo conoce el
-// catalogo estatico.
+// Valida que un id sea un curso asignable: tiene que existir en la base de datos.
 export async function isAssignableCourseId(id: unknown): Promise<boolean> {
-  if (isCodixCourseId(id)) return true;
   if (typeof id !== "string") return false;
   const course = await prisma.course.findUnique({ where: { id }, select: { id: true } });
   return !!course;

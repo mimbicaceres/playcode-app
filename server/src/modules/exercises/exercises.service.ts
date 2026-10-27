@@ -3,11 +3,20 @@ import { Request, Response } from 'express';
 import { CODIX_CATALOG } from '../../lib/codixCatalog';
 import { gradeSubmission, ReportedOutput } from '../../lib/codeGrader';
 import { nextStreakOnActivity } from '../../lib/streak';
+import { getGamification, gamificationDelta } from '../../lib/gamification';
+import { getGamificationSettings, xpForExercise } from '../../lib/gamificationSettings';
+import { dateKeyInArgentina } from '../../lib/streak';
 
 interface AttemptContext {
   rewardXp: number;
   unitId?: string;
   courseId?: string;
+}
+
+// Datos opcionales del intento que informa el navegador.
+interface AttemptExtra {
+  durationSec?: number;
+  lines?: number;
 }
 
 /**
@@ -32,8 +41,38 @@ export async function registerAttempt(
   exerciseId: string,
   success: boolean,
   context: AttemptContext,
+  extra: AttemptExtra = {},
 ) {
   const { rewardXp, unitId, courseId } = context;
+
+  // Historial: una fila por intento (acierte o no). De aca salen la precision,
+  // el tiempo de practica y la actividad reciente.
+  await prisma.exerciseAttempt.create({
+    data: { userId, exerciseId, unitId, courseId, success, durationSec: extra.durationSec, lines: extra.lines },
+  });
+
+  // El XP y la fecha de completado se otorgan SOLO la primera vez que se resuelve
+  // el ejercicio: repasar uno ya resuelto no suma XP de nuevo ni pisa la fecha.
+  const previous = await prisma.exerciseProgress.findUnique({
+    where: { userId_exerciseId: { userId, exerciseId } },
+    select: { completed: true },
+  });
+  const firstCompletion = success && !previous?.completed;
+
+  // XP otorgado segun los ajustes del admin: (XP del ejercicio + base) x multiplicador,
+  // mas un bonus la primera vez en el dia que el alumno completa un ejercicio.
+  const settings = await getGamificationSettings();
+  let bonusXp = 0;
+  if (firstCompletion && settings.streakBonusXp > 0) {
+    const todayKey = dateKeyInArgentina(new Date());
+    const recent = await prisma.exerciseProgress.findMany({
+      where: { userId, completed: true, completedAt: { gte: new Date(Date.now() - 36 * 60 * 60 * 1000) } },
+      select: { completedAt: true },
+    });
+    const alreadyToday = recent.some((r) => r.completedAt && dateKeyInArgentina(r.completedAt) === todayKey);
+    if (!alreadyToday) bonusXp = settings.streakBonusXp;
+  }
+  const awardedXp = firstCompletion ? xpForExercise(rewardXp, settings) + bonusXp : 0;
 
   const progress = await prisma.exerciseProgress.upsert({
     where: { userId_exerciseId: { userId, exerciseId } },
@@ -41,7 +80,7 @@ export async function registerAttempt(
       attempts: { increment: 1 },
       unitId,
       courseId,
-      ...(success && { completed: true, completedAt: new Date(), xpEarned: rewardXp }),
+      ...(firstCompletion && { completed: true, completedAt: new Date(), xpEarned: awardedXp }),
       lastAttempt: new Date(),
     },
     create: {
@@ -52,7 +91,7 @@ export async function registerAttempt(
       attempts: 1,
       completed: success,
       completedAt: success ? new Date() : undefined,
-      xpEarned: success ? rewardXp : 0,
+      xpEarned: success ? awardedXp : 0,
       lastAttempt: new Date(),
     },
   });
@@ -69,13 +108,13 @@ export async function registerAttempt(
   await prisma.user.update({
     where: { id: userId },
     data: {
-      totalXp: { increment: success ? rewardXp : 0 },
+      totalXp: { increment: awardedXp },
       streakDays: newStreak,
       lastActivityAt: now,
     },
   });
 
-  return { attempts: progress.attempts, completed: progress.completed, xpEarned: success ? rewardXp : 0, streakDays: newStreak };
+  return { attempts: progress.attempts, completed: progress.completed, xpEarned: awardedXp, bonusXp, streakDays: newStreak };
 }
 
 /** Express handler for submitting an exercise attempt */
@@ -93,10 +132,11 @@ export async function submitExercise(req: Request, res: Response) {
   // codigo (nunca un veredicto), y aca se compara contra el expectedOutput
   // real guardado en la base de datos.
   if (exercise && exercise.type === 'code_runner') {
-    const { code, outputs, infraError } = (req.body ?? {}) as {
+    const { code, outputs, infraError, timeSpentSec } = (req.body ?? {}) as {
       code?: string;
       outputs?: ReportedOutput[];
       infraError?: string;
+      timeSpentSec?: number;
     };
 
     if (typeof code !== 'string') {
@@ -122,14 +162,24 @@ export async function submitExercise(req: Request, res: Response) {
     );
 
     try {
-      const result = await registerAttempt(userId, exerciseId, grade.allPassed, {
-        rewardXp: exercise.rewardXp,
-        unitId: exercise.unitId,
-        courseId: exercise.unit.courseId,
-      });
+      const before = await getGamification(userId);
+      const result = await registerAttempt(
+        userId,
+        exerciseId,
+        grade.allPassed,
+        { rewardXp: exercise.rewardXp, unitId: exercise.unitId, courseId: exercise.unit.courseId },
+        {
+          // El tiempo lo informa el navegador: se acota para que un dato absurdo no distorsione las estadisticas.
+          durationSec: typeof timeSpentSec === 'number' && timeSpentSec >= 0 ? Math.min(Math.round(timeSpentSec), 1800) : undefined,
+          // Una respuesta de opcion multiple no es codigo: no suma lineas.
+          lines: exercise.language === 'quiz' ? undefined : code.split(/\r?\n/).filter((line) => line.trim().length > 0).length,
+        },
+      );
+      const after = await getGamification(userId);
       return res.status(200).json({
         ...result,
         success: grade.allPassed,
+        gamification: gamificationDelta(before, after),
         results: grade.results.map((r) => ({
           testCaseId: r.testCaseId,
           passed: r.passed,

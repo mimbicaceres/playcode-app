@@ -18,8 +18,10 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       // Forward API calls to the Express backend (server/, PORT=4000 by default).
+      // Por defecto la API corre en :4000; API_PROXY_TARGET permite apuntar a otra
+      // (p. ej. API_PROXY_TARGET=http://localhost:4001 si el 4000 esta ocupado).
       proxy: {
-        '/api': 'http://localhost:4000',
+        '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:4000',
       },
     },
   };

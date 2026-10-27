@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ReportsData } from '../types';
 import { StatusHud } from './ui/StatusHud';
 import { XpTrendChart } from './ui/XpTrendChart';
+import { ExportFormat, buildReportModel, exportReport } from '../lib/reportExport';
 import { REPORT_PERIODS, ReportPeriod, TREND_DESCRIPTIONS, TREND_LABELS, reportForPeriod } from '../data/reportPeriods';
 
 interface ReportsAnalyticsViewProps {
@@ -57,8 +58,18 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
   const isEducational = scope === 'general' || scope === 'teacher' || scope === 'course';
   // Estado que guarda el rango de tiempo seleccionado para los reportes (por ejemplo '30d')
   const [timeRange, setTimeRange] = useState<ReportPeriod>('30d');
-  // Indica si se mostró la notificación de exportación exitosa
-  const [copiedNotification, setCopiedNotification] = useState(false);
+  // Exportacion: menu de formatos, estado de la descarga y resultado (nombre del archivo o error).
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exportResult, setExportResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) setExportMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
   // Figures of the selected period (the report data covers the last 30 days).
   // Calcula los datos del reporte filtrados por el rango de tiempo seleccionado
   const data = reportForPeriod(baseData, timeRange);
@@ -66,13 +77,32 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
   const hasData = data.coursePerformance.length > 0 || data.totalErrors > 0 || !!data.xpTrend;
 
   /**
-   * Maneja la acción de exportar el reporte.
-   * Muestra una notificación temporal indicando que la exportación se realizó.
+   * Exporta el reporte que se está viendo (con el período elegido) en el formato elegido y
+   * descarga el archivo: PDF para compartir o imprimir, CSV para abrir en Excel.
    */
-  const handleExport = () => {
-    setCopiedNotification(true);
-    // Oculta la notificación después de 3 segundos
-    setTimeout(() => setCopiedNotification(false), 3000);
+  const handleExport = async (format: ExportFormat) => {
+    setExportMenuOpen(false);
+    setExporting(format);
+    setExportResult(null);
+    try {
+      const model = buildReportModel({
+        data,
+        title: scope === 'course' && courseName ? `${header.title} - ${courseName}` : header.title,
+        subtitle: scope === 'course' && courseName ? courseName : header.subtitle,
+        periodLabel: REPORT_PERIODS.find((p) => p.id === timeRange)?.label ?? timeRange,
+        educational: isEducational,
+        performanceTitle: scope === 'course' ? 'unidad' : 'curso',
+        xpDescription: TREND_DESCRIPTIONS[timeRange],
+        trendLabels: TREND_LABELS[timeRange],
+      });
+      const fileName = await exportReport(model, format);
+      setExportResult({ ok: true, text: `Se descargó ${fileName}` });
+    } catch {
+      setExportResult({ ok: false, text: 'No se pudo generar el archivo. Intentá de nuevo.' });
+    } finally {
+      setExporting(null);
+      setTimeout(() => setExportResult(null), 6000);
+    }
   };
 
   const timeRanges = REPORT_PERIODS;
@@ -118,21 +148,52 @@ export const ReportsAnalyticsView: React.FC<ReportsAnalyticsViewProps> = ({
           ))}
         </div>
 
-        <button
-          onClick={handleExport}
-          disabled={!hasData}
-          title={hasData ? undefined : NO_PROGRESS_MESSAGE}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-        >
-          <span className="material-symbols-outlined text-[17px]">download</span>
-          <span>Exportar PDF/CSV</span>
-        </button>
+        <div className="relative" ref={exportRef}>
+          <button
+            onClick={() => setExportMenuOpen((open) => !open)}
+            disabled={!hasData || exporting !== null}
+            title={hasData ? undefined : NO_PROGRESS_MESSAGE}
+            aria-haspopup="menu"
+            aria-expanded={exportMenuOpen}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+          >
+            <span className="material-symbols-outlined text-[17px]">{exporting ? 'hourglass_top' : 'download'}</span>
+            <span>{exporting ? 'Generando…' : 'Exportar reporte'}</span>
+            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          {exportMenuOpen && (
+            <div role="menu" className="absolute right-0 top-full mt-2 w-64 bg-white text-[#0b1c30] rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50">
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Elegí el formato</p>
+              {([
+                { format: 'pdf' as const, icon: 'picture_as_pdf', color: 'text-red-600', title: 'PDF', detail: 'Informe con gráficos, para compartir o imprimir' },
+                { format: 'csv' as const, icon: 'table_view', color: 'text-emerald-600', title: 'CSV', detail: 'Tabla de datos, para abrir en Excel' },
+              ]).map((option) => (
+                <button
+                  key={option.format}
+                  role="menuitem"
+                  onClick={() => handleExport(option.format)}
+                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left cursor-pointer transition-colors"
+                >
+                  <span className={`material-symbols-outlined text-2xl ${option.color}`}>{option.icon}</span>
+                  <span>
+                    <span className="block text-sm font-bold">{option.title}</span>
+                    <span className="block text-[11px] text-slate-500 leading-snug">{option.detail}</span>
+                  </span>
+                </button>
+              ))}
+              <p className="px-3 pb-2 pt-1 text-[10px] text-slate-400">Incluye el período elegido: {REPORT_PERIODS.find((p) => p.id === timeRange)?.label}.</p>
+            </div>
+          )}
+        </div>
       </StatusHud>
 
-      {copiedNotification && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
-          <span className="material-symbols-outlined text-base text-emerald-600">check_circle</span>
-          <span>Informe analítico exportado y descargado exitosamente.</span>
+      {exportResult && (
+        <div
+          role="status"
+          className={`p-3 border rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in ${exportResult.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-700'}`}
+        >
+          <span className={`material-symbols-outlined text-base ${exportResult.ok ? 'text-emerald-600' : 'text-red-600'}`}>{exportResult.ok ? 'check_circle' : 'error'}</span>
+          <span>{exportResult.text}</span>
         </div>
       )}
 

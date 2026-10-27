@@ -1,12 +1,13 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { seedUsers } from "../src/prisma/seed";
-import { seedCatalog } from "./seeds/catalog";
+import { retireLegacyCourses } from "./seeds/catalog";
 import { seedPythonCourse } from "./seed-python-course";
 import { seedJavascriptCourse } from "./seeds/javascript-course";
 import { seedSqlCourse } from "./seeds/sql-course";
 import { seedHtmlCourse } from "./seeds/html-course";
 import { seedInstitute } from "./seeds/institute";
+import { seedAttempts } from "./seeds/attempts";
 
 // Punto de entrada unico del seed: `npm run db:seed` (o `prisma migrate dev` /
 // `prisma migrate reset`, que lo llaman solos). Cada paso es idempotente, asi
@@ -14,8 +15,8 @@ import { seedInstitute } from "./seeds/institute";
 async function main() {
   console.log("== Usuarios ==");
   await seedUsers();
-  console.log("== Catálogo CODIX (cursos del front) ==");
-  await seedCatalog();
+  console.log("== Cursos viejos del catálogo (baja) ==");
+  await retireLegacyCourses();
   console.log("== Curso Python - Fundamentos ==");
   await seedPythonCourse();
   console.log("== Curso JavaScript - Fundamentos ==");
@@ -26,6 +27,8 @@ async function main() {
   await seedHtmlCourse();
   console.log("== Institución de ejemplo (usuarios, asignaciones y progreso) ==");
   await seedInstitute();
+  console.log("== Historial de intentos ==");
+  await seedAttempts();
 }
 
 main()

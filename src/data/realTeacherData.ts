@@ -1,5 +1,5 @@
 import { Course, ReportsData, StudentProgressRecord, TeacherCourseRecord } from '../types';
-import type { CourseProgressSummary, TeachingCourse } from '../auth/api';
+import type { ProgressByCourseResult, TeachingCourse } from '../auth/api';
 import { findCatalogCourse } from './codixCatalog';
 import { buildStudentProgressRecord } from './realStudentData';
 
@@ -12,18 +12,18 @@ const BAR_COLORS = ['bg-emerald-500', 'bg-blue-500', 'bg-amber-400', 'bg-violet-
 // Courses in charge of the teacher (assigned by an admin, GET /api/users/me/teaching),
 // each with the students assigned to it. Progress tracking does not exist in the
 // backend yet for the static catalog courses, so their averages start at zero;
-// dynamic (DB-backed) courses come with real progress (pass each student's
-// CourseProgressSummary[] via `studentProgress`, keyed by student id).
+// dynamic (DB-backed) courses come with real progress, statistics and
+// gamification (pass each student's result via `studentProgress`, keyed by student id).
 export function buildTeacherCourses(
   teaching: TeachingCourse[],
   dynamicCourses?: Map<string, Course>,
-  studentProgress?: Map<string, CourseProgressSummary[]>,
+  studentProgress?: Map<string, ProgressByCourseResult>,
 ): TeacherCourseRecord[] {
   return teaching.flatMap(({ courseId, students }) => {
     const course = findCatalogCourse(courseId) ?? dynamicCourses?.get(courseId);
     if (!course) return [];
     const studentRecords = students.map((s) =>
-      buildStudentProgressRecord(s, course.id, studentProgress?.get(s.id) ?? []),
+      buildStudentProgressRecord(s, course.id, studentProgress?.get(s.id)),
     );
     const averageProgress = studentRecords.length > 0
       ? Math.round(studentRecords.reduce((sum, s) => sum + s.overallProgress, 0) / studentRecords.length)
