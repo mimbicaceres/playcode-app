@@ -16,6 +16,7 @@
     "db:seed:users": "tsx src/prisma/seed.ts",
     "db:seed:python": "tsx prisma/seed-python-course.ts",
     "verify:js-course": "tsx scripts/verifyJsCourse.ts",
+    "verify:sql-course": "tsx scripts/verifySqlCourse.ts",
     "db:catalog": "tsx scripts/populateCatalog.ts"
   },
   "dependencies": {
@@ -24,7 +25,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "sql.js": "1.13.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

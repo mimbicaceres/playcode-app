@@ -3,6 +3,7 @@
 // Nunca deciden si el alumno aprobo; eso lo hace el backend (codeGrader.ts).
 import { RunSubmissionResult, RunnerTestCase, runTestCases as runPython } from './pyodideRunner';
 import { runJsTestCases } from './jsRunner';
+import { runSqlTestCases } from './sqlRunner';
 
 export type { RunnerTestCase, RunSubmissionResult };
 
@@ -12,6 +13,7 @@ type Runner = (code: string, testCases: RunnerTestCase[]) => Promise<RunSubmissi
 const RUNNERS: Record<string, Runner> = {
   python: runPython,
   javascript: runJsTestCases,
+  sql: runSqlTestCases,
 };
 
 export function runExercise(language: string, code: string, testCases: RunnerTestCase[]): Promise<RunSubmissionResult> {
