@@ -47,7 +47,7 @@ async function upsertUsers(users: SeedUser[], password: string, syncPassword: bo
   }
 }
 
-async function main() {
+export async function seedUsers() {
   if (process.env.NODE_ENV === "production") {
     throw new Error("Refusing to seed development users in production");
   }
@@ -66,9 +66,11 @@ async function main() {
   await upsertUsers(TEST_USERS, testPassword, true);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module) {
+  seedUsers()
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    })
+    .finally(() => prisma.$disconnect());
+}

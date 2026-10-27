@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx src/prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:users": "tsx src/prisma/seed.ts",
     "db:seed:python": "tsx prisma/seed-python-course.ts",
     "db:catalog": "tsx scripts/populateCatalog.ts"
   },
@@ -33,6 +34,9 @@
     "prisma": "^6.19.3",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

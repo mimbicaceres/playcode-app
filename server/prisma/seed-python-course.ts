@@ -1066,7 +1066,7 @@ const units: SeedUnit[] = [
   { slug: "python-fundamentos-u3-subacciones", title: "Subacciones", exercises: subacciones },
 ];
 
-async function main() {
+async function seedPythonCourse() {
   const course = await prisma.course.upsert({
     where: { slug: COURSE.slug },
     update: { title: COURSE.title, description: COURSE.description },
@@ -1116,8 +1116,8 @@ async function main() {
   console.log("Seed del curso de Python completado.");
 }
 
-export { units, COURSE };
+export { units, COURSE, seedPythonCourse };
 
 if (require.main === module) {
-  main().finally(() => prisma.$disconnect());
+  seedPythonCourse().finally(() => prisma.$disconnect());
 }
