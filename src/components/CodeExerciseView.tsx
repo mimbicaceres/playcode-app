@@ -24,10 +24,47 @@ interface CodeExerciseViewProps {
 // alumno el traceback crudo de Python (que no le dice nada util a alguien
 // que recien esta aprendiendo). Esta pista reemplaza por completo lo que
 // Pyodide reporta como error tecnico.
+// HTML/CSS: busca la primera medicion que no coincide y la explica.
+function describeDomMismatch(actual: string, expected: string | undefined): string {
+  const fallback = 'tu página no cumple con lo que pide la consigna';
+  try {
+    const got = JSON.parse(actual) as Record<string, unknown>[];
+    const want = expected ? (JSON.parse(expected) as Record<string, unknown>[]) : [];
+    const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    for (let i = 0; i < want.length; i++) {
+      const w = want[i];
+      const g = got[i] ?? {};
+      const sel = `${w.selector}`;
+      if ('count' in w && !same(g.count, w.count)) {
+        return `encontramos ${g.count} elemento(s) que coinciden con "${sel}" y se esperaba${w.count === 1 ? '' : 'n'} ${w.count}`;
+      }
+      for (const key of ['text', 'texts', 'hasText'] as const) {
+        if (key in w && !same(g[key], w[key])) {
+          return key === 'hasText' ? `el elemento "${sel}" no tiene texto` : `el texto de "${sel}" no es el esperado (se esperaba ${JSON.stringify(w[key])} y encontramos ${JSON.stringify(g[key])})`;
+        }
+      }
+      for (const key of ['attrs', 'attrsAll', 'styles', 'stylesAll'] as const) {
+        const wantGroup = (w[key] ?? {}) as Record<string, unknown>;
+        const gotGroup = (g[key] ?? {}) as Record<string, unknown>;
+        for (const name of Object.keys(wantGroup)) {
+          if (!same(gotGroup[name], wantGroup[name])) {
+            const what = key.startsWith('attrs') ? 'el atributo' : 'el estilo';
+            return `${what} ${name} de "${sel}" es ${JSON.stringify(gotGroup[name] ?? null)} y se esperaba ${JSON.stringify(wantGroup[name])}`;
+          }
+        }
+      }
+      if ('rects' in w && !same(g.rects, w.rects)) return `la posición o el tamaño de "${sel}" no es el esperado`;
+    }
+  } catch {
+    // Si el resultado no se puede interpretar, se usa el mensaje general.
+  }
+  return fallback;
+}
+
 // Descripcion del desvio para los modos que no comparan texto plano (SQL y
 // HTML/CSS): el JSON crudo no le sirve al alumno, asi que se resume.
 function describeMismatch(mode: string | undefined, actual: string, expected: string | undefined): string {
-  if (mode === 'dom') return 'tu página no cumple con lo que pide la consigna';
+  if (mode === 'dom') return describeDomMismatch(actual, expected);
   try {
     const a = JSON.parse(actual) as { columns: string[]; rows: unknown[] };
     const e = expected ? (JSON.parse(expected) as { columns: string[]; rows: unknown[] }) : null;
