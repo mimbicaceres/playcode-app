@@ -37,6 +37,10 @@ export interface ExerciseTestCase {
   id: string;
   input: string | null;
   isHidden: boolean;
+  // "text" | "rows_ordered" | "rows_unordered" | "dom" (ver server/src/lib/codeGrader.ts).
+  compareMode?: string;
+  // Datos para el runner del lenguaje (base SQL de ejemplo, selectores a medir...).
+  spec?: unknown;
   // Nunca viene presente cuando isHidden es true.
   expectedOutput?: string;
 }

@@ -6,6 +6,8 @@
 export interface RunnerTestCase {
   id: string;
   input?: string;
+  // Datos propios del runner (solo lo usan JS/SQL/HTML; Pyodide lo ignora).
+  spec?: unknown;
 }
 
 export interface RunnerOutput {

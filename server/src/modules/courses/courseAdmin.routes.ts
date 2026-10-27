@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 
 const router = Router();
@@ -23,22 +24,41 @@ async function uniqueSlug(title: string, exists: (slug: string) => Promise<boole
   return slug;
 }
 
+const LANGUAGES = ['python', 'javascript', 'html', 'sql'];
+const COMPARE_MODES = ['text', 'rows_ordered', 'rows_unordered', 'dom'];
+
 interface TestCaseInput {
   input?: string;
   expectedOutput: string;
   isHidden?: boolean;
+  compareMode?: string;
+  spec?: Prisma.InputJsonValue;
 }
+
+// Datos opcionales del runner; se persisten tal cual para que editar un
+// ejercicio no pierda el spec ni el modo de comparacion de sus casos.
+const testCaseRunnerData = (tc: TestCaseInput) => ({
+  compareMode: tc.compareMode ?? 'text',
+  spec: tc.spec ?? Prisma.JsonNull,
+});
 
 function validateTestCases(raw: unknown): TestCaseInput[] | null {
   if (!Array.isArray(raw) || raw.length === 0) return null;
   const result: TestCaseInput[] = [];
   for (const item of raw) {
     if (typeof item !== 'object' || item === null) return null;
-    const { input, expectedOutput, isHidden } = item as Record<string, unknown>;
+    const { input, expectedOutput, isHidden, compareMode, spec } = item as Record<string, unknown>;
+    if (compareMode !== undefined && (typeof compareMode !== 'string' || !COMPARE_MODES.includes(compareMode))) return null;
     if (typeof expectedOutput !== 'string' || expectedOutput.length === 0) return null;
     if (input !== undefined && typeof input !== 'string') return null;
     if (isHidden !== undefined && typeof isHidden !== 'boolean') return null;
-    result.push({ input: typeof input === 'string' ? input : '', expectedOutput, isHidden: !!isHidden });
+    result.push({
+      input: typeof input === 'string' ? input : '',
+      expectedOutput,
+      isHidden: !!isHidden,
+      compareMode: typeof compareMode === 'string' ? compareMode : undefined,
+      spec: spec === undefined || spec === null ? undefined : (spec as Prisma.InputJsonValue),
+    });
   }
   return result;
 }
@@ -142,7 +162,8 @@ router.patch('/units/:unitId', async (req: Request, res: Response) => {
 });
 
 router.post('/units/:unitId/exercises', async (req: Request, res: Response) => {
-  const { title, prompt, starterCode, rewardXp, hint, testCases } = (req.body ?? {}) as Record<string, unknown>;
+  const { title, prompt, starterCode, rewardXp, hint, testCases, language } = (req.body ?? {}) as Record<string, unknown>;
+  if (language !== undefined && (typeof language !== 'string' || !LANGUAGES.includes(language))) return res.status(400).json({ error: `language debe ser uno de: ${LANGUAGES.join(', ')}` });
   if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'title es requerido' });
   if (typeof prompt !== 'string' || !prompt.trim()) return res.status(400).json({ error: 'prompt es requerido' });
   if (typeof starterCode !== 'string') return res.status(400).json({ error: 'starterCode es requerido' });
@@ -162,6 +183,7 @@ router.post('/units/:unitId/exercises', async (req: Request, res: Response) => {
         order: (maxOrder._max.order ?? -1) + 1,
         prompt: prompt.trim(),
         starterCode,
+        ...(typeof language === 'string' && { language }),
         rewardXp,
         hint: typeof hint === 'string' ? hint.trim() || null : null,
         unitId: unit.id,
@@ -171,6 +193,7 @@ router.post('/units/:unitId/exercises', async (req: Request, res: Response) => {
             input: tc.input || null,
             expectedOutput: tc.expectedOutput,
             isHidden: !!tc.isHidden,
+            ...testCaseRunnerData(tc),
           })),
         },
       },
@@ -184,7 +207,8 @@ router.post('/units/:unitId/exercises', async (req: Request, res: Response) => {
 });
 
 router.patch('/exercises/:exerciseId', async (req: Request, res: Response) => {
-  const { title, prompt, starterCode, rewardXp, hint, testCases } = (req.body ?? {}) as Record<string, unknown>;
+  const { title, prompt, starterCode, rewardXp, hint, testCases, language } = (req.body ?? {}) as Record<string, unknown>;
+  if (language !== undefined && (typeof language !== 'string' || !LANGUAGES.includes(language))) return res.status(400).json({ error: `language debe ser uno de: ${LANGUAGES.join(', ')}` });
   if (title !== undefined && (typeof title !== 'string' || !title.trim())) return res.status(400).json({ error: 'title no puede estar vacio' });
   if (prompt !== undefined && (typeof prompt !== 'string' || !prompt.trim())) return res.status(400).json({ error: 'prompt no puede estar vacio' });
   if (starterCode !== undefined && typeof starterCode !== 'string') return res.status(400).json({ error: 'starterCode invalido' });
@@ -206,6 +230,7 @@ router.patch('/exercises/:exerciseId', async (req: Request, res: Response) => {
           ...(title !== undefined && { title: (title as string).trim() }),
           ...(prompt !== undefined && { prompt: (prompt as string).trim() }),
           ...(starterCode !== undefined && { starterCode }),
+          ...(typeof language === 'string' && { language }),
           ...(rewardXp !== undefined && { rewardXp }),
           ...(hint !== undefined && { hint: typeof hint === 'string' ? hint.trim() || null : null }),
         },
@@ -219,6 +244,7 @@ router.patch('/exercises/:exerciseId', async (req: Request, res: Response) => {
             input: tc.input || null,
             expectedOutput: tc.expectedOutput,
             isHidden: !!tc.isHidden,
+            ...testCaseRunnerData(tc),
           })),
         });
       }

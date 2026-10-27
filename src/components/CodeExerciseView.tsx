@@ -5,7 +5,8 @@ import { ErrorFeedbackModal } from './Modals/ErrorFeedbackModal';
 import { SuccessFeedbackModal } from './Modals/SuccessFeedbackModal';
 import { HintModal } from './Modals/HintModal';
 import { ApiError, getStoredToken, submitCodeExercise, GradedTestCaseResult } from '../auth/api';
-import { runTestCases } from '../lib/pyodideRunner';
+import { runExercise } from '../lib/codeRunner';
+import { languageInfo } from '../lib/languages';
 
 interface CodeExerciseViewProps {
   onNavigate: (view: ScreenView) => void;
@@ -23,6 +24,26 @@ interface CodeExerciseViewProps {
 // alumno el traceback crudo de Python (que no le dice nada util a alguien
 // que recien esta aprendiendo). Esta pista reemplaza por completo lo que
 // Pyodide reporta como error tecnico.
+// Descripcion del desvio para los modos que no comparan texto plano (SQL y
+// HTML/CSS): el JSON crudo no le sirve al alumno, asi que se resume.
+function describeMismatch(mode: string | undefined, actual: string, expected: string | undefined): string {
+  if (mode === 'dom') return 'tu página no cumple con lo que pide la consigna';
+  try {
+    const a = JSON.parse(actual) as { columns: string[]; rows: unknown[] };
+    const e = expected ? (JSON.parse(expected) as { columns: string[]; rows: unknown[] }) : null;
+    if (!e) return 'tu consulta devolvió un resultado distinto del esperado';
+    if (a.columns.join(',').toLowerCase() !== e.columns.join(',').toLowerCase()) {
+      return `tu consulta devolvió las columnas (${a.columns.join(', ')}) y se esperaban (${e.columns.join(', ')})`;
+    }
+    if (a.rows.length !== e.rows.length) {
+      return `tu consulta devolvió ${a.rows.length} filas y se esperaban ${e.rows.length}`;
+    }
+    return 'tu consulta devolvió las filas esperadas en cantidad, pero con valores u orden distintos';
+  } catch {
+    return 'tu consulta no devolvió un resultado válido';
+  }
+}
+
 function buildErrorMessage(exercise: Exercise, results: GradedTestCaseResult[]): string {
   const hintSuffix = exercise.hint ? ` Pista: ${exercise.hint}` : '';
   const failedVisible = results.find((r) => !r.passed && !r.isHidden);
@@ -34,6 +55,10 @@ function buildErrorMessage(exercise: Exercise, results: GradedTestCaseResult[]):
     }
     if (failedVisible.stderr) {
       return `${inputPart}, tu código tuvo un error al ejecutarse y no llegó a dar un resultado.${hintSuffix}`;
+    }
+    const mode = testCase?.compareMode;
+    if (mode && mode !== 'text') {
+      return `${inputPart}, ${describeMismatch(mode, failedVisible.actualOutput, failedVisible.expectedOutput)}.${hintSuffix}`;
     }
     return `${inputPart}, tu código imprimió "${failedVisible.actualOutput}" pero se esperaba "${failedVisible.expectedOutput}".${hintSuffix}`;
   }
@@ -60,6 +85,7 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
   const [infraErrorMessage, setInfraErrorMessage] = useState<string | null>(null);
   const [lastResults, setLastResults] = useState<GradedTestCaseResult[] | null>(null);
 
+  const lang = languageInfo(exercise.codeLanguage);
   const exerciseIndex = unit.exercises.findIndex((e) => e.id === exercise.id);
 
   const handleReset = () => setCode(exercise.starterCode ?? '');
@@ -71,9 +97,10 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
     setInfraErrorMessage(null);
     try {
       const testCases = exercise.testCases ?? [];
-      const { outputs, infraError } = await runTestCases(
+      const { outputs, infraError } = await runExercise(
+        exercise.codeLanguage,
         code,
-        testCases.map((testCase) => ({ id: testCase.id, input: testCase.input ?? '' })),
+        testCases.map((testCase) => ({ id: testCase.id, input: testCase.input ?? '', spec: testCase.spec })),
       );
 
       const result = infraError
@@ -159,7 +186,7 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
           <div className="flex justify-between items-center px-2">
             <span className="text-xs font-semibold text-[#434655] flex items-center gap-1.5 font-mono">
               <span className="material-symbols-outlined text-sm text-[#2563eb]">code</span>
-              main.py
+              {lang.fileName}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -186,7 +213,7 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
                 <div className="w-3 h-3 rounded-full bg-yellow-500/90" />
                 <div className="w-3 h-3 rounded-full bg-green-500/90" />
               </div>
-              <span className="text-slate-400 text-xs font-mono">Python 3.10</span>
+              <span className="text-slate-400 text-xs font-mono">{lang.label}</span>
             </div>
 
             <div className="flex w-full min-h-[200px] text-[#e2e8f0] font-mono text-sm">
@@ -204,7 +231,7 @@ export const CodeExerciseView: React.FC<CodeExerciseViewProps> = ({
                   onChange={(e) => setCode(e.target.value)}
                   className="w-full h-full min-h-[180px] bg-transparent text-[#e2e8f0] font-mono text-sm leading-[26px] focus:outline-none resize-none caret-[#ffb95f] selection:bg-blue-600/40"
                   spellCheck={false}
-                  placeholder="# Escribe tu código aquí..."
+                  placeholder={lang.placeholder}
                 />
               </div>
             </div>

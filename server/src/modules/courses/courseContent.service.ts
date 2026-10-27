@@ -4,6 +4,10 @@ export interface CourseContentTestCase {
   id: string;
   input: string | null;
   isHidden: boolean;
+  compareMode: string;
+  // Datos del runner (script SQL de ejemplo, selectores a medir...). Nunca
+  // contiene la respuesta esperada, asi que puede viajar tambien en casos ocultos.
+  spec: unknown;
   // Nunca se incluye cuando isHidden es true.
   expectedOutput?: string;
 }
@@ -109,6 +113,8 @@ export async function getCourseContent(courseId: string, userId: string): Promis
           id: testCase.id,
           input: testCase.input,
           isHidden: testCase.isHidden,
+          compareMode: testCase.compareMode,
+          spec: testCase.spec,
           expectedOutput: testCase.isHidden ? undefined : testCase.expectedOutput,
         })),
       };

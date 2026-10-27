@@ -103,6 +103,13 @@ model TestCase {
   expectedOutput String
   // Casos ocultos: se usan para corregir pero nunca se muestran al alumno.
   isHidden       Boolean  @default(false)
+  // Como se compara la salida que reporta el navegador con expectedOutput:
+  // "text" (stdout, default), "rows_ordered" / "rows_unordered" (SQL: JSON con
+  // columnas y filas) o "dom" (HTML/CSS: JSON con las mediciones del DOM).
+  compareMode    String   @default("text")
+  // Datos que necesita el runner (p. ej. el script SQL de la base de ejemplo o
+  // que selectores medir). Nunca incluye la respuesta esperada.
+  spec           Json?
 
   @@index([exerciseId])
 }

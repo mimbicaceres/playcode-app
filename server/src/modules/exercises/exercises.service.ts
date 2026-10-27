@@ -117,7 +117,7 @@ export async function submitExercise(req: Request, res: Response) {
     }
 
     const grade = gradeSubmission(
-      exercise.testCases.map((tc) => ({ id: tc.id, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden })),
+      exercise.testCases.map((tc) => ({ id: tc.id, expectedOutput: tc.expectedOutput, isHidden: tc.isHidden, compareMode: tc.compareMode })),
       outputs,
     );
 

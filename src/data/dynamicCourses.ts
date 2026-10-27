@@ -5,6 +5,7 @@
 import { Course, Unit, Exercise } from '../types';
 import { findCatalogCourse } from './codixCatalog';
 import { CourseContent } from '../auth/api';
+import { languageInfo } from '../lib/languages';
 
 export function splitCourseIds(courseIds: string[]): { staticIds: string[]; dynamicIds: string[] } {
   const staticIds: string[] = [];
@@ -19,13 +20,14 @@ export function splitCourseIds(courseIds: string[]): { staticIds: string[]; dyna
   return { staticIds, dynamicIds };
 }
 
-// Valores visuales por defecto para cursos dinamicos (no hay color/icono en
-// la base de datos todavia - eso es Fase B). Independiente de mockData.
-const DEFAULT_COURSE_STYLE = {
-  color: '#16A34A',
-  accentBorder: '#16A34A',
-  iconName: 'code',
-};
+// Valores visuales de los cursos dinamicos: no hay color/icono en la base de
+// datos todavia (Fase B), asi que se derivan del lenguaje de sus ejercicios.
+// Independiente de mockData.
+function courseStyle(content: CourseContent) {
+  const language = content.units.flatMap((u) => u.exercises)[0]?.language ?? 'python';
+  const info = languageInfo(language);
+  return { category: info.category, tag: info.category, color: info.color, accentBorder: info.color, iconName: info.iconName };
+}
 
 function toFrontendExercise(exercise: CourseContent['units'][number]['exercises'][number], unitId: string): Exercise {
   return {
@@ -84,9 +86,7 @@ export function toFrontendCourse(content: CourseContent): Course {
     title: content.title ?? '',
     subtitle: content.description ?? '',
     description: content.description ?? '',
-    category: 'Python',
-    tag: 'Python',
-    ...DEFAULT_COURSE_STYLE,
+    ...courseStyle(content),
     progressPercent: content.progressPercent,
     completedLessons,
     totalLessons,

@@ -387,7 +387,7 @@ export interface CourseContent {
       rewardXp: number;
       hint: string | null;
       status: 'completed' | 'active' | 'locked';
-      testCases: { id: string; input: string | null; isHidden: boolean; expectedOutput?: string }[];
+      testCases: { id: string; input: string | null; isHidden: boolean; compareMode?: string; spec?: unknown; expectedOutput?: string }[];
     }[];
   }[];
 }
