@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { seedUsers } from "../src/prisma/seed";
+import { seedCatalog } from "./seeds/catalog";
 import { seedPythonCourse } from "./seed-python-course";
 import { seedJavascriptCourse } from "./seeds/javascript-course";
 import { seedSqlCourse } from "./seeds/sql-course";
@@ -13,6 +14,8 @@ import { seedInstitute } from "./seeds/institute";
 async function main() {
   console.log("== Usuarios ==");
   await seedUsers();
+  console.log("== Catálogo CODIX (cursos del front) ==");
+  await seedCatalog();
   console.log("== Curso Python - Fundamentos ==");
   await seedPythonCourse();
   console.log("== Curso JavaScript - Fundamentos ==");

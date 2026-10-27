@@ -93,7 +93,7 @@ interface RosterUser {
   lastName: string;
   role: UserRole;
   grade?: string;
-  school: string;
+  school?: string;
 }
 
 async function ensureUsers(roster: RosterUser[]): Promise<Map<string, string>> {
@@ -150,7 +150,7 @@ export async function seedInstitute() {
     ...students.map(({ index: _index, ...u }) => u),
     ...TEACHERS.filter((t) => t.email !== "docente@ejemplo.com").map((t) => ({ email: t.email, name: t.name, lastName: t.lastName, role: "teacher" as UserRole, school: SCHOOL })),
     { email: ADMIN.email, name: ADMIN.name, lastName: ADMIN.lastName, role: "admin", school: SCHOOL },
-    { email: E2E.email, name: E2E.name, lastName: E2E.lastName, role: "student", school: SCHOOL },
+    { email: E2E.email, name: E2E.name, lastName: E2E.lastName, role: "student" },
   ];
   console.log("Usuarios:");
   const ids = await ensureUsers(roster);
@@ -238,4 +238,70 @@ export async function seedInstitute() {
   if ((await prisma.exerciseProgress.count({ where: { userId: ids.get(E2E.email)! } })) === 0) {
     await applyGradualProgress(E2E.email, E2E.progress);
   }
+
+  await seedDevAccounts();
+}
+
+// Cuentas de desarrollo (password123, las crea seedUsers): para que todo el equipo
+// las tenga igual, se les asignan los mismos cursos y, al alumno, el mismo avance
+// inicial en Python que tiene en la base original. No pisa nada: solo agrega
+// lo que falta (asignaciones nuevas) y solo da progreso a quien no tiene ninguno.
+const DEV_COURSES: Record<string, string[]> = {
+  "estudiante@ejemplo.com": ["python-fundamentos", "prog1"],
+  "docente@ejemplo.com": ["prog1", "python-fundamentos", "sql-consultas"],
+};
+// Ejercicios de Python que ya tenia resueltos estudiante@ (intentos, y hace cuantos
+// dias): 5 de hace dos semanas y 3 de hoy.
+const ESTUDIANTE_PROGRESS: { slug: string; attempts: number; daysAgo: number }[] = [
+  { slug: "py-1-1-5-2", attempts: 2, daysAgo: 14 },
+  { slug: "py-1-1-5-3", attempts: 1, daysAgo: 14 },
+  { slug: "py-1-1-5-4", attempts: 1, daysAgo: 14 },
+  { slug: "py-1-1-5-5", attempts: 3, daysAgo: 14 },
+  { slug: "py-1-1-5-6", attempts: 2, daysAgo: 14 },
+  { slug: "py-1-1-5-7", attempts: 2, daysAgo: 14 },
+  { slug: "py-1-1-5-1", attempts: 4, daysAgo: 0 },
+  { slug: "py-1-7", attempts: 4, daysAgo: 0 },
+];
+
+async function seedDevAccounts() {
+  const users = await prisma.user.findMany({ where: { email: { in: Object.keys(DEV_COURSES) } } });
+  const courses = await prisma.course.findMany({ where: { slug: { in: [...new Set(Object.values(DEV_COURSES).flat())] } } });
+  const courseBySlug = new Map(courses.map((c) => [c.slug, c]));
+  const data = users.flatMap((u) =>
+    DEV_COURSES[u.email].flatMap((slug) => {
+      const course = courseBySlug.get(slug);
+      return course ? [{ userId: u.id, courseId: course.id }] : [];
+    }),
+  );
+  const assigned = await prisma.courseAssignment.createMany({ data, skipDuplicates: true });
+  console.log(`Cuentas de desarrollo: ${assigned.count} asignaciones nuevas`);
+
+  const estudiante = users.find((u) => u.email === "estudiante@ejemplo.com");
+  const python = courseBySlug.get("python-fundamentos");
+  if (!estudiante || !python) return;
+  if ((await prisma.exerciseProgress.count({ where: { userId: estudiante.id } })) > 0) return;
+
+  const exercises = await prisma.exercise.findMany({
+    where: { slug: { in: ESTUDIANTE_PROGRESS.map((p) => p.slug) } },
+    select: { id: true, slug: true, unitId: true, rewardXp: true },
+  });
+  const bySlug = new Map(exercises.map((e) => [e.slug, e]));
+  const now = Date.now();
+  const rows: Prisma.ExerciseProgressCreateManyInput[] = [];
+  let totalXp = 0;
+  let lastTs = 0;
+  ESTUDIANTE_PROGRESS.forEach((p, i) => {
+    const exercise = bySlug.get(p.slug);
+    if (!exercise) return;
+    const at = new Date(now - p.daysAgo * DAY_MS - (ESTUDIANTE_PROGRESS.length - i) * HOUR_MS);
+    lastTs = Math.max(lastTs, at.getTime());
+    totalXp += exercise.rewardXp;
+    rows.push({
+      userId: estudiante.id, exerciseId: exercise.id, unitId: exercise.unitId, courseId: python.id,
+      attempts: p.attempts, completed: true, xpEarned: exercise.rewardXp, lastAttempt: at, completedAt: at,
+    });
+  });
+  await prisma.exerciseProgress.createMany({ data: rows, skipDuplicates: true });
+  await prisma.user.update({ where: { id: estudiante.id }, data: { totalXp, streakDays: 1, lastActivityAt: new Date(lastTs) } });
+  console.log(`estudiante@ejemplo.com: ${rows.length} ejercicios de Python, ${totalXp} XP`);
 }
