@@ -4,8 +4,8 @@ import { ScreenView, UserProfile, Course, Unit, TeacherCourseRecord, ReportsData
 import { getDemoPerspective, getPathForView, getViewForPath, isDemoPath } from './routes';
 import { canAccessView, getHomeView, isPublicView } from './auth/access';
 import {
-  ApiError, CourseProgressSummary, Gamification, ProgressByCourseResult, RegisterData, StudentStats, TeachingCourse, clearToken, fetchCourseContent, fetchInstituteReport, fetchMe, fetchMyCourses,
-  fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest, registerRequest,
+  ApiError, CourseProgressSummary, Gamification, ProgressByCourseResult, StudentStats, TeachingCourse, clearToken, fetchCourseContent, fetchInstituteReport, fetchMe, fetchMyCourses,
+  fetchMyProgressByCourse, fetchStudentProgressByCourse, fetchTeaching, getStoredToken, loginRequest,
   storeToken, toUserProfile, updateMyAvatarRequest,
 } from './auth/api';
 import { BADGES, COURSES_DATA, DEMO_REPORTS, INITIAL_USER, MASCOT_IMAGES } from './data/mockData';
@@ -23,7 +23,6 @@ import { StudentProgressView } from './components/StudentProgressView';
 import { EmptyState } from './components/ui/EmptyState';
 import { WelcomeView } from './components/WelcomeView';
 import { LoginView } from './components/LoginView';
-import { RegisterView } from './components/RegisterView';
 import { StudentDashboard } from './components/StudentDashboard';
 import { CourseMapView } from './components/CourseMapView';
 import { CourseRoadmapView } from './components/CourseRoadmapView';
@@ -312,26 +311,6 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
     navigate(getPathForView('login'), { replace: true });
   };
 
-  // Public sign-up always creates a student (enforced by the backend).
-  // Returns an error message to show in the form, or null on success.
-  const handleRegister = async (data: RegisterData): Promise<string | null> => {
-    try {
-      const { user: apiUser, token } = await registerRequest(data);
-      storeToken(token);
-      setUser(toUserProfile(apiUser));
-      navigate(getPathForView(getHomeView(apiUser.role)), { replace: true });
-      return null;
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
-        return 'El email ya está registrado.';
-      }
-      if (error instanceof ApiError && error.status === 400) {
-        return 'Revisá los datos ingresados e intentá de nuevo.';
-      }
-      return 'No se pudo conectar con el servidor. Intentá de nuevo.';
-    }
-  };
-
   if (!authChecked) {
     return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
@@ -341,7 +320,7 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
   if (!user && (isDemo || !isPublicView(currentView))) {
     return <Navigate to={getPathForView('login')} replace state={{ from: location.pathname }} />;
   }
-  if (user && (currentView === 'welcome' || currentView === 'login' || currentView === 'register')) {
+  if (user && (currentView === 'welcome' || currentView === 'login')) {
     return <Navigate to={getPathForView(getHomeView(user.role))} replace />;
   }
   if (user && isDemo && isPublicView(currentView)) {
@@ -473,10 +452,6 @@ const [myCourseIds, setMyCourseIds] = useState<string[]>([]);
 
         {currentView === 'login' && (
           <LoginView onNavigate={setCurrentView} onLogin={handleLogin} />
-        )}
-
-        {currentView === 'register' && (
-          <RegisterView onNavigate={setCurrentView} onRegister={handleRegister} />
         )}
 
         {isDenied && user && (

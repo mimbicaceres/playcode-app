@@ -7,7 +7,6 @@ type Access = UserRole[] | 'public';
 const REAL_ACCESS: Record<ScreenView, Access> = {
   welcome: 'public',
   login: 'public',
-  register: 'public',
   dashboard: ['student'],
   courses_map: ['student', 'teacher'],
   // Course view: the student's learning path, or the teacher's course ("Ver curso").
@@ -30,7 +29,6 @@ const REAL_ACCESS: Record<ScreenView, Access> = {
 const DEMO_ACCESS: Record<ScreenView, Access> = {
   welcome: 'public',
   login: 'public',
-  register: 'public',
   dashboard: ['admin'],
   courses_map: ['admin'],
   course_roadmap: ['admin'],

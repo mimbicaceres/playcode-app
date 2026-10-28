@@ -108,19 +108,6 @@ async function createUserWithRole(input: RegisterInput, role: UserRole): Promise
   return user;
 }
 
-// Public registration: always creates a student.
-/**
- * Registra un nuevo usuario con rol de estudiante y devuelve el token de autenticación.
- * @param input Información de registro del estudiante.
- * @returns Objeto AuthResult con el usuario público y el token JWT.
- */
-export async function registerUser(input: RegisterInput): Promise<AuthResult> {
-  const user = await createUserWithRole(input, "student");
-  const token = signToken({ sub: user.id, role: user.role });
-
-  return { user: toPublicUser(user), token };
-}
-
 // Admin-only (see users.routes.ts): creates a teacher. No token is returned,
 // the teacher signs in through the regular login.
 /**

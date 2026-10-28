@@ -3,7 +3,6 @@ export type UserRole = 'student' | 'teacher' | 'admin';
 export type ScreenView = 
   | 'welcome'
   | 'login'
-  | 'register'
   | 'dashboard'
   | 'courses_map'
   | 'course_roadmap'

@@ -73,8 +73,8 @@ const LoginIllustration: React.FC = () => (
 );
 
 export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => {
-  const [email, setEmail] = useState('estudiante@ejemplo.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('Email o contrasena incorrectos');
@@ -136,7 +136,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => 
                     type="email"
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); if (showError) setShowError(false); }}
-                    placeholder="estudiante@ejemplo.com"
+                    placeholder="tu@correo.com"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-[#f8f9ff] focus:bg-white focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100 transition-all text-sm outline-none text-[#0b1c30]"
                     required
                   />
@@ -152,7 +152,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => 
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); if (showError) setShowError(false); }}
-                    placeholder="secreta"
+                    placeholder="Tu contraseña"
                     className={`w-full pl-10 pr-10 py-3 rounded-xl border ${showError ? 'border-red-400 bg-red-50/50' : 'border-slate-200 bg-[#f8f9ff]'} focus:bg-white focus:border-[#2563eb] focus:ring-2 focus:ring-blue-100 transition-all text-sm outline-none text-[#0b1c30]`}
                     required
                   />
@@ -182,26 +182,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onNavigate, onLogin }) => 
                 <span>{isSubmitting ? 'Ingresando...' : 'Ingresar'}</span>
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
-              <div className="flex justify-end text-xs mt-1">
-                <a
-                  href="#forgot"
-                  onClick={(e) => { e.preventDefault(); alert('Se ha enviado un enlace de recuperacion a tu email.'); }}
-                  className="text-[#2563eb] font-medium hover:underline"
-                >
-                  Olvidaste tu contrasena?
-                </a>
-              </div>
             </form>
             {/* Tip */}
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-start gap-3 bg-blue-50/60 p-3 rounded-xl">
               <span className="text-xl">&#128161;</span>
-              <p className="text-xs text-slate-600 leading-relaxed"><strong>Tip:</strong> En desarrollo podés usar las cuentas demo estudiante@ejemplo.com, docente@ejemplo.com o admin@ejemplo.com (contraseña: password123).</p>
+              <p className="text-xs text-slate-600 leading-relaxed"><strong>Tip:</strong> Tu usuario lo crea el administrador de tu institución. Si todavía no tenés tus datos de ingreso o no podés entrar, consultale a tu docente o al administrador.</p>
             </div>
-          </div>
-          {/* Footer Link */}
-          <div className="mt-6 text-center text-sm text-[#434655]">
-            <span>No tienes una cuenta? </span>
-            <button onClick={() => onNavigate('register')} className="text-[#2563eb] font-bold hover:underline">Registrate aqui</button>
           </div>
         </main>
       </div>

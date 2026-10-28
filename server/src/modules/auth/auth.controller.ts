@@ -1,33 +1,11 @@
 import { Request, Response } from "express";
 import {
-  registerUser,
   loginUser,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   AccountDisabledError,
 } from "./auth.service";
 import { normalizeEmail, validateNewUserInput } from "./auth.validation";
-
-export async function register(req: Request, res: Response): Promise<Response> {
-  const validation = validateNewUserInput(req.body);
-
-  if (!validation.ok) {
-    return res.status(400).json({ error: validation.error });
-  }
-
-  try {
-    const result = await registerUser(validation.data);
-
-    return res.status(201).json(result);
-  } catch (error) {
-    if (error instanceof EmailAlreadyRegisteredError) {
-      return res.status(409).json({ error: error.message });
-    }
-
-    console.error("register error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-}
 
 export async function login(req: Request, res: Response): Promise<Response> {
   const { email, password } = req.body ?? {};

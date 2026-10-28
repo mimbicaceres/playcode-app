@@ -64,28 +64,6 @@ export function loginRequest(email: string, password: string) {
   });
 }
 
-// Public registration: the backend always creates the account as 'student',
-// so no role is sent from here.
-export interface RegisterData {
-  name: string;
-  lastName: string;
-  email: string;
-  password: string;
-  school: string | null;
-}
-
-/**
- * Envía una solicitud de registro de nuevo estudiante.
- * @param data Información requerida para crear la cuenta.
- * @returns Promesa con el usuario creado y su token de autenticación.
- */
-export function registerRequest(data: RegisterData) {
-  return request<{ user: ApiUser; token: string }>('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
 /**
  * Obtiene la información del usuario autenticado.
  * @param token Token JWT almacenado.

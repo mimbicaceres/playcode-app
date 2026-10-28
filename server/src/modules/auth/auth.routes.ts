@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { register, login } from "./auth.controller";
+import { login } from "./auth.controller";
 
 const router = Router();
 
-router.post("/register", register);
+// No hay registro publico: las cuentas las da de alta el administrador (POST /api/users/students y /teachers).
 router.post("/login", login);
 
 export default router;

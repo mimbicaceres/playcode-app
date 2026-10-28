@@ -4,7 +4,6 @@ import { ScreenView } from './types';
 export const viewToPath: Record<ScreenView, string> = {
   welcome: '/',
   login: '/login',
-  register: '/register',
   dashboard: '/alumno',
   courses_map: '/alumno/cursos',
   course_roadmap: '/alumno/cursos/roadmap',
